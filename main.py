@@ -1,16 +1,13 @@
 import discord
 from discord.ext import commands
 
-import yaml
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix=".", intents=intents)
-
-def load_config():
-    with open("config.yml", "r") as f:
-        return yaml.load(f, Loader=yaml.FullLoader)
-
-config = load_config()
 
 bot.version = "v1.0"
 
@@ -28,4 +25,4 @@ async def on_ready():
     print("All cogs loaded!")
 
 if __name__ == "__main__":
-    bot.run(config["token"])
+    bot.run(os.getenv("TOKEN"))

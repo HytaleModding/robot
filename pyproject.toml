@@ -8,5 +8,5 @@ dependencies = [
     "aiosqlite>=0.21.0",
     "chat-exporter>=2.8.4",
     "discord-py>=2.6.4",
-    "pyyaml>=6.0.3",
+    "python-dotenv>=1.2.1",
 ]
