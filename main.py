@@ -19,6 +19,7 @@ async def on_ready():
     await bot.load_extension("cogs.auto-thread")
     await bot.load_extension("cogs.keywords")
     await bot.load_extension("cogs.mod")
+    await bot.load_extension("cogs.thread-utils")
 
     await bot.tree.sync()
     
