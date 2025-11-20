@@ -11,19 +11,18 @@ bot = commands.Bot(command_prefix=".", intents=intents)
 
 bot.version = "v1.0"
 
+async def load_cogs():
+    for filename in os.listdir("./cogs"):
+        if filename.endswith(".py"):
+            await bot.load_extension(f"cogs.{filename[:-3]}")
+            print(f"Loaded cog: {filename}")
+
 @bot.event
 async def on_ready():
+    await load_cogs()
     print(f"{bot.user} is ready!")
-    
-    # Load cogs
-    await bot.load_extension("cogs.auto-thread")
-    await bot.load_extension("cogs.keywords")
-    await bot.load_extension("cogs.mod")
-    await bot.load_extension("cogs.thread-utils")
 
     await bot.tree.sync()
-    
-    print("All cogs loaded!")
 
 if __name__ == "__main__":
     bot.run(os.getenv("TOKEN"))
