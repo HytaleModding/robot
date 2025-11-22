@@ -31,6 +31,16 @@ TAGS = {
         "title": None,
         "description": "Right-click any message in a thread you own and select 'Apps' -> 'Pin Message' to pin that message to the thread. Only the thread owner can pin messages in their thread.",
         "url": None
+    },
+    "platforms": {
+        "title": None,
+        "description": "- Hytale will initially release only for Windows PC\n- Mac & Linux support will be attempted but not guaranteed. Can use Wine/Proton in the meantime\n- Console and mobile app not being considered anytime soon, but Simon says it will be possible to make the Legacy Engine cross-platform",
+        "url": None
+    },
+    "networking": {
+        "title": None,
+        "description": "- Hytale will use the QUIC transport protocol.\n- QUIC is a hybrid protocol that builds off UDP to get the same speed benefits, but adds some layers of reliability like TCP.",
+        "url": None
     }
 }
 
