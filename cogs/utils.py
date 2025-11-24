@@ -3,10 +3,12 @@ from discord import app_commands
 from discord.ext import commands
 import re
 
+from better_profanity import profanity
 
 class Utils(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        profanity.load_censor_words(whitelist=["hytale", "hypixel", "mcc", "mcp", "mcpe", "minecraft", "fuck", "fucking", "shit", "bullshit", "bs", "idiot", "dumb"])
 
     @app_commands.command(
         name="cooldown",
@@ -66,8 +68,9 @@ class Utils(commands.Cog):
                 if not target_message:
                     continue
 
+                
                 embed = discord.Embed(
-                    description=target_message.content or "*No text content*",
+                    description=profanity.censor(target_message.content) or "*No text content*",
                     color=0x2F3136,
                     timestamp=target_message.created_at
                 )
