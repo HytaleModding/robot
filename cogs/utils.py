@@ -46,6 +46,7 @@ class Utils(commands.Cog):
         if message.author.bot:
             return
 
+        # Handle Discord message link quotes
         discord_link_pattern = r'https://discord\.com/channels/(\d+)/(\d+)/(\d+)'
         matches = re.findall(discord_link_pattern, message.content)
 
@@ -92,6 +93,22 @@ class Utils(commands.Cog):
             except (discord.NotFound, discord.Forbidden, discord.HTTPException):
                 continue
 
+        twitter_patterns = [
+            (r'https://(www\.)?twitter\.com/', 'https://xcancel.com/'),
+            (r'https://(www\.)?x\.com/', 'https://xcancel.com/'),
+            (r'https://vxtwitter\.com/', 'https://xcancel.com/'),
+            (r'https://fxtwitter\.com/', 'https://xcancel.com/'),
+            (r'https://nitter\.net/', 'https://xcancel.com/'),
+        ]
+        
+        content = message.content
+        replaced_content = content
+        
+        for pattern, replacement in twitter_patterns:
+            replaced_content = re.sub(pattern, replacement, replaced_content)
+        
+        if replaced_content != content:
+            await message.reply(f"<{replaced_content}>\n-# This is a link that makes it more convenient to share X tweets. XCancel is a service allows you to view tweets without signing in", mention_author=False)
 
 async def setup(bot):
     await bot.add_cog(Utils(bot))
