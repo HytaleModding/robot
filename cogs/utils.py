@@ -120,7 +120,7 @@ class Utils(commands.Cog):
 
         thread = interaction.channel
         
-        if thread.owner_id != interaction.user.id:
+        if thread.owner_id != interaction.user.id or any(role.id == 1440180775512178750 for role in interaction.user.roles):
             await interaction.response.send_message(
                 "Only the thread owner can send announcements.",
                 ephemeral=True
@@ -167,8 +167,8 @@ class Utils(commands.Cog):
             return
 
         thread = interaction.channel
-        
-        if thread.owner_id != interaction.user.id:
+
+        if thread.owner_id != interaction.user.id or any(role.id == 1440180775512178750 for role in interaction.user.roles):
             await interaction.response.send_message(
                 "Only the thread owner can view the followers list.",
                 ephemeral=True
@@ -206,7 +206,6 @@ class Utils(commands.Cog):
         if message.author.bot:
             return
 
-        # Handle Discord message link quotes
         discord_link_pattern = r'https://discord\.com/channels/(\d+)/(\d+)/(\d+)'
         matches = re.findall(discord_link_pattern, message.content)
 
