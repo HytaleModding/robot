@@ -18,5 +18,11 @@ class AutoThread(commands.Cog):
                 reason="Auto-thread for discussion channel"
             )
 
+
+    @commands.Cog.listener
+    async def on_thread_create(self, thread: discord.Thread):
+        if isinstance(thread.parent, discord.ForumChannel):
+            await thread.starter_message.pin()
+
 async def setup(bot):
     await bot.add_cog(AutoThread(bot))
