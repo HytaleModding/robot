@@ -15,6 +15,7 @@ class Voting(commands.Cog):
             callback=self.upvote_message
         )
         self.bot.tree.add_command(self.upvote_menu)
+        self.showcase_channel = self.bot.get_channel(1440185755745124503)
         self.update_votes.start()
 
     def cog_unload(self):
@@ -59,57 +60,78 @@ class Voting(commands.Cog):
             f"You have upvoted this message! It now has {total_upvotes} upvote(s).",
             ephemeral=True
         )
-
+    
     @tasks.loop(seconds=30)
     async def update_votes(self):
         showcases = await self.db.get_top_5_showcases()
-        channel = self.bot.get_channel(1440185755745124503)
+        channel = self.bot.get_channel(1442943712538660934)
         if not isinstance(channel, discord.TextChannel):
             return
 
-        messages = await channel.history(limit=100).flatten()
-        if len(messages) < 5: 
-            for _ in range(5 - len(messages)):
-                await channel.send("Showcase placeholder message.")
-        for message in messages:
-            if message.author.bot:
-                continue
-            upvotes = await self.db.get_upvotes(message.id)
-            
-            embed = discord.Embed(
-                title="Community Showcase",
-                description=message.content if message.content else "No description provided",
-                color=discord.Color.blue(),
-                timestamp=message.created_at
-            )
-            embed.set_author(
-                name=message.author.display_name,
-                icon_url=message.author.display_avatar.url
-            )
-            embed.add_field(
-                name="Upvotes",
-                value=f"⬆️ {upvotes}",
-                inline=True
-            )
-            
-            if message.attachments:
-                attachment = message.attachments[0]
-                if attachment.content_type and attachment.content_type.startswith('image/'):
-                    embed.set_image(url=attachment.url)
-                else:
-                    embed.add_field(
-                        name="Attachment",
-                        value=f"[{attachment.filename}]({attachment.url})",
-                        inline=False
-                    )
-            
-            embed.add_field(
-                name="Original Message",
-                value=f"[Jump to Message]({message.jump_url})",
-                inline=True
-            )
+        async for msg in channel.history(limit=100):
+            if msg.author == self.bot.user:
+                await msg.delete()
 
-            await message.edit(content=message.author.mention, embed=embed)
+        for i, showcase in enumerate(showcases[:5], 1):
+            print(i, showcase)
+            original_message = None
+            try:
+                original_message = await self.showcase_channel.fetch_message(showcase['showcase_id'])
+            except Exception as e:
+                print(e)
+                continue
+            
+            if not original_message:
+                print("Original message not found")
+                continue
+            
+            # Create embed
+            ranking_emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"#{i}"
+            embed = discord.Embed(
+                title=f"{ranking_emoji} Top Community Showcase",
+                description=original_message.content if original_message.content else "No description provided",
+                color=0xFFD700 if i == 1 else 0xC0C0C0 if i == 2 else 0xCD7F32 if i == 3 else 0x7289DA,
+                url=original_message.jump_url
+            )
+            
+            embed.set_author(
+                name=original_message.author.display_name,
+                icon_url=original_message.author.display_avatar.url
+            )
+            
+            embed.add_field(
+                name="⬆️ Upvotes",
+                value=str(showcase['upvote_count']),
+                inline=True
+            )
+            
+            embed.add_field(
+                name="👤 Author",
+                value=original_message.author.mention,
+                inline=True
+            )
+            
+            if original_message.attachments:
+                attachment = original_message.attachments[0]
+                if attachment.content_type and attachment.content_type.startswith('video/'):
+                    embed.add_field(
+                        name="📹 Video",
+                        value=f"[View Video]({attachment.url})",
+                        inline=True
+                    )
+                elif attachment.content_type and attachment.content_type.startswith('audio/'):
+                    embed.add_field(
+                        name="🎵 Audio",
+                        value=f"[Listen Here]({attachment.url})",
+                        inline=True
+                    )
+                else:
+                    embed.set_image(url=attachment.url)
+            
+            embed.set_footer(text="Community Showcase Leaderboard")
+            
+            # Send the embed
+            await channel.send(embed=embed)
 
 
 async def setup(bot):
