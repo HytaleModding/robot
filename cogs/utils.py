@@ -8,6 +8,7 @@ from better_profanity import profanity
 class Utils(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.db = bot.database
         profanity.load_censor_words(whitelist_words=["hytale", "hypixel", "mcc", "mcp", "mcpe", "minecraft", "fuck", "fucking", "shit", "bullshit", "bs", "idiot", "dumb"])
 
     @app_commands.command(
@@ -40,6 +41,165 @@ class Utils(commands.Cog):
             f"Set a cooldown of {seconds} seconds on this channel.",
             ephemeral=True
         )
+
+    @app_commands.command(
+        name="follow",
+        description="Follow a thread to get notified of announcements."
+    )
+    async def follow_thread(self, interaction: discord.Interaction):
+        """Follow the current thread to get notifications when the owner makes announcements."""
+        if not isinstance(interaction.channel, discord.Thread):
+            await interaction.response.send_message(
+                "This command can only be used in threads.",
+                ephemeral=True
+            )
+            return
+
+        thread = interaction.channel
+        user_id = interaction.user.id
+        
+        if await self.db.is_following_thread(thread.id, user_id):
+            await interaction.response.send_message(
+                "You are already following this thread.",
+                ephemeral=True
+            )
+            return
+
+        added = await self.db.add_thread_follower(thread.id, user_id)
+        if added:
+            await interaction.response.send_message(
+                f"✅ You are now following **{thread.name}**. You'll be notified when the thread owner makes announcements.",
+                ephemeral=True
+            )
+        else:
+            await interaction.response.send_message(
+                "Failed to follow the thread. Please try again.",
+                ephemeral=True
+            )
+
+    @app_commands.command(
+        name="unfollow",
+        description="Unfollow a thread to stop getting notifications."
+    )
+    async def unfollow_thread(self, interaction: discord.Interaction):
+        """Stop following the current thread."""
+        if not isinstance(interaction.channel, discord.Thread):
+            await interaction.response.send_message(
+                "This command can only be used in threads.",
+                ephemeral=True
+            )
+            return
+
+        thread = interaction.channel
+        user_id = interaction.user.id
+        
+        removed = await self.db.remove_thread_follower(thread.id, user_id)
+        if removed:
+            await interaction.response.send_message(
+                f"✅ You are no longer following **{thread.name}**.",
+                ephemeral=True
+            )
+        else:
+            await interaction.response.send_message(
+                "You are not currently following this thread.",
+                ephemeral=True
+            )
+
+    @app_commands.command(
+        name="announce",
+        description="Ping all thread followers (thread owner only)."
+    )
+    async def announce_to_followers(self, interaction: discord.Interaction):
+        """Ping all followers of this thread. Only the thread owner can use this."""
+        if not isinstance(interaction.channel, discord.Thread):
+            await interaction.response.send_message(
+                "This command can only be used in threads.",
+                ephemeral=True
+            )
+            return
+
+        thread = interaction.channel
+        
+        if thread.owner_id != interaction.user.id:
+            await interaction.response.send_message(
+                "Only the thread owner can send announcements.",
+                ephemeral=True
+            )
+            return
+
+        followers = await self.db.get_thread_followers(thread.id)
+        
+        if not followers:
+            await interaction.response.send_message(
+                "No one is following this thread yet.",
+                ephemeral=True
+            )
+            return
+
+        mentions = " ".join([f"<@{user_id}>" for user_id in followers])
+        
+        if len(mentions) > 2000:
+            chunk_size = 20
+            follower_chunks = [followers[i:i + chunk_size] for i in range(0, len(followers), chunk_size)]
+            
+            await interaction.response.send_message(
+                f"📢 Pinging {len(followers)} followers...",
+                ephemeral=True
+            )
+            
+            for chunk in follower_chunks:
+                chunk_mentions = " ".join([f"<@{user_id}>" for user_id in chunk])
+                await thread.send(chunk_mentions)
+        else:
+            await interaction.response.send_message(mentions)
+
+    @app_commands.command(
+        name="followers",
+        description="List all followers of this thread (thread owner only)."
+    )
+    async def list_followers(self, interaction: discord.Interaction):
+        """List all followers of the current thread. Only the thread owner can use this."""
+        if not isinstance(interaction.channel, discord.Thread):
+            await interaction.response.send_message(
+                "This command can only be used in threads.",
+                ephemeral=True
+            )
+            return
+
+        thread = interaction.channel
+        
+        if thread.owner_id != interaction.user.id:
+            await interaction.response.send_message(
+                "Only the thread owner can view the followers list.",
+                ephemeral=True
+            )
+            return
+
+        follower_ids = await self.db.get_thread_followers(thread.id)
+        
+        if not follower_ids:
+            await interaction.response.send_message(
+                "No one is following this thread yet.",
+                ephemeral=True
+            )
+            return
+
+        followers = []
+        for user_id in follower_ids:
+            member = interaction.guild.get_member(user_id)
+            if member:
+                followers.append(member.display_name)
+            else:
+                followers.append(f"Unknown User ({user_id})")
+
+        embed = discord.Embed(
+            title=f"👥 Followers of {thread.name}",
+            description="\n".join([f"• {name}" for name in followers]),
+            color=discord.Color.green()
+        )
+        embed.set_footer(text=f"Total followers: {len(followers)}")
+
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):

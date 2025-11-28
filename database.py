@@ -50,6 +50,14 @@ class Database:
                 )
                 """)
 
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS thread_followers (
+                    thread_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    PRIMARY KEY (thread_id, user_id)
+                )
+            """)
+
             await db.commit()
     
     # Warning methods
@@ -176,3 +184,47 @@ class Database:
             )
             rows = await cursor.fetchall()
             return [dict(row) for row in rows]
+    
+    # Thread follower methods
+    async def add_thread_follower(self, thread_id: int, user_id: int) -> bool:
+        """Add a user as a follower of a thread. Returns True if added, False if already following."""
+        async with aiosqlite.connect(self.db_path) as db:
+            try:
+                await db.execute(
+                    "INSERT INTO thread_followers (thread_id, user_id) VALUES (?, ?)",
+                    (thread_id, user_id)
+                )
+                await db.commit()
+                return True
+            except sqlite3.IntegrityError:
+                return False
+    
+    async def remove_thread_follower(self, thread_id: int, user_id: int) -> bool:
+        """Remove a user as a follower of a thread. Returns True if removed, False if not following."""
+        async with aiosqlite.connect(self.db_path) as db:
+            cursor = await db.execute(
+                "DELETE FROM thread_followers WHERE thread_id = ? AND user_id = ?",
+                (thread_id, user_id)
+            )
+            await db.commit()
+            return cursor.rowcount > 0
+    
+    async def get_thread_followers(self, thread_id: int) -> List[int]:
+        """Get all followers of a thread."""
+        async with aiosqlite.connect(self.db_path) as db:
+            cursor = await db.execute(
+                "SELECT user_id FROM thread_followers WHERE thread_id = ?",
+                (thread_id,)
+            )
+            rows = await cursor.fetchall()
+            return [row[0] for row in rows]
+    
+    async def is_following_thread(self, thread_id: int, user_id: int) -> bool:
+        """Check if a user is following a thread."""
+        async with aiosqlite.connect(self.db_path) as db:
+            cursor = await db.execute(
+                "SELECT 1 FROM thread_followers WHERE thread_id = ? AND user_id = ?",
+                (thread_id, user_id)
+            )
+            row = await cursor.fetchone()
+            return row is not None
