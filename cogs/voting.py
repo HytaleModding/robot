@@ -10,61 +10,85 @@ class Voting(commands.Cog):
         self.bot = bot
         self.db: Database = bot.database
 
-        self.upvote_menu = app_commands.ContextMenu(
-            name="Upvote",
-            callback=self.upvote_message
-        )
-        self.bot.tree.add_command(self.upvote_menu)
         self.showcase_channel = self.bot.get_channel(1440185755745124503)
         self.update_votes.start()
 
     def cog_unload(self):
         self.update_votes.cancel()
         return super().cog_unload()
-
-    async def upvote_message(self, interaction: discord.Interaction, message: discord.Message):
-        if interaction.channel_id != 1440185755745124503:
-            await interaction.response.send_message(
-                "Upvotes can only be given in the #voting channel.", ephemeral=True
-            )
-            return
-
-        if message.author.id == interaction.user.id:
-            await interaction.response.send_message(
-                "You cannot upvote your own message.", ephemeral=True
-            )
-            return
-        
-        if message.author.bot:
-            await interaction.response.send_message(
-                "You cannot upvote bot messages.", ephemeral=True
-            )
-            return
-        
-        if len(message.attachments) == 0:
-            await interaction.response.send_message(
-                "You can only upvote messages with attachments.", ephemeral=True
-            )
-            return
-        
-        if await self.db.has_user_upvoted(interaction.user.id, message.id):
-            upvotes = await self.db.get_upvotes(message.id)
-            await interaction.response.send_message(
-                f"You have already upvoted this message. This message has {upvotes} upvote(s).", ephemeral=True
-            )
-            return
-        
-        await self.db.log_upvote(interaction.user.id, message.id)
-        total_upvotes = await self.db.get_upvotes(message.id)
-        await interaction.response.send_message(
-            f"You have upvoted this message! It now has {total_upvotes} upvote(s).",
-            ephemeral=True
-        )
     
+    async def scan_existing_showcases(self):
+        """Scan all messages in showcase channel and update database with current upvote counts"""
+        if not self.showcase_channel:
+            print("Showcase channel not found")
+            return
+        
+        print("Starting to scan existing showcases...")
+        message_count = 0
+        
+        async for message in self.showcase_channel.history(limit=None):
+            if message.author.bot:
+                continue
+                
+            fire_reaction = None
+            for reaction in message.reactions:
+                if str(reaction.emoji) == '🔥':
+                    fire_reaction = reaction
+                    break
+            
+            if fire_reaction:
+                async for user in fire_reaction.users():
+                    if not user.bot:
+                        await self.db.log_upvote(user.id, message.id)
+                        
+                print(f"Updated message {message.id} with {fire_reaction.count - 1} upvotes")
+            
+            message_count += 1
+            
+            if message_count % 10 == 0:
+                await asyncio.sleep(1)
+                print(f"Processed {message_count} messages...")
+        
+        print(f"Finished scanning {message_count} messages")
+
+    @app_commands.command(name="sync_votes", description="Sync existing showcase votes to database")
+    @app_commands.default_permissions(administrator=True)
+    async def sync_votes(self, interaction: discord.Interaction):
+        """Admin command to sync existing votes"""
+        await interaction.response.defer(ephemeral=True)
+        
+        try:
+            await self.scan_existing_showcases()
+            await interaction.followup.send("✅ Successfully synced all existing showcase votes!")
+        except Exception as e:
+            await interaction.followup.send(f"❌ Error syncing votes: {str(e)}")
+    
+    @commands.Cog.listener()
+    async def on_reaction_add(self, reaction: discord.Reaction, user: discord.User):
+        if user.bot:
+            return
+        
+        if reaction.message.channel.id != 1440185755745124503:
+            return
+        
+        if str(reaction.emoji) == '🔥':
+            await self.db.log_upvote(user.id, reaction.message.id)
+        
+    @commands.Cog.listener()
+    async def on_reaction_remove(self, reaction: discord.Reaction, user: discord.User):
+        if user.bot:
+            return
+        
+        if reaction.message.channel.id != 1440185755745124503:
+            return
+        
+        if str(reaction.emoji) == '🔥':
+            await self.db.remove_upvote(user.id, reaction.message.id)
+
     @tasks.loop(seconds=30)
     async def update_votes(self):
         showcases = await self.db.get_top_5_showcases()
-        channel = self.bot.get_channel(1442943712538660934)
+        channel = self.bot.get_channel(1442968358080221254)
         if not isinstance(channel, discord.TextChannel):
             return
 
@@ -73,7 +97,6 @@ class Voting(commands.Cog):
                 await msg.delete()
 
         for i, showcase in enumerate(showcases[:5], 1):
-            print(i, showcase)
             original_message = None
             try:
                 original_message = await self.showcase_channel.fetch_message(showcase['showcase_id'])
@@ -85,7 +108,6 @@ class Voting(commands.Cog):
                 print("Original message not found")
                 continue
             
-            # Create embed
             ranking_emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"#{i}"
             embed = discord.Embed(
                 title=f"{ranking_emoji} Top Community Showcase",
@@ -130,8 +152,12 @@ class Voting(commands.Cog):
             
             embed.set_footer(text="Community Showcase Leaderboard")
             
-            # Send the embed
             await channel.send(embed=embed)
+        e = discord.Embed(
+            description="React with 🔥 in the <#1440185755745124503> channel to upvote your favorite showcases!",
+            color=0x2F3136
+        )
+        await channel.send(embed=e)
 
 
 async def setup(bot):
