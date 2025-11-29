@@ -4,6 +4,10 @@ from discord import app_commands
 import asyncio
 import json
 import os
+import chat_exporter
+import aiohttp
+import aiofiles
+from datetime import datetime
 
 class TicketView(discord.ui.View):
     def __init__(self):
@@ -64,6 +68,15 @@ class TicketControlView(discord.ui.View):
         )
         await interaction.response.send_message(embed=embed, view=ConfirmCloseView(), ephemeral=True)
 
+class TranscriptView(discord.ui.View):
+    def __init__(self, transcript_url):
+        super().__init__(timeout=None)
+        self.add_item(discord.ui.Button(
+            label='📄 View Transcript',
+            style=discord.ButtonStyle.url,
+            url=transcript_url
+        ))
+
 class ConfirmCloseView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=60)
@@ -71,33 +84,58 @@ class ConfirmCloseView(discord.ui.View):
     @discord.ui.button(label='✅ Confirm', style=discord.ButtonStyle.green)
     async def confirm_close(self, interaction: discord.Interaction, button: discord.ui.Button):
         channel = interaction.channel
-        
-        messages = []
-        async for message in channel.history(limit=None, oldest_first=True):
-            if not message.author.bot or message.embeds:
-                messages.append(f"{message.created_at.strftime('%Y-%m-%d %H:%M:%S')} - {message.author}: {message.content}")
-
         ticket_owner_id = int(channel.name.split('-')[1])
         ticket_owner = interaction.guild.get_member(ticket_owner_id)
         
-        if ticket_owner:
-            try:
-                transcript_embed = discord.Embed(
-                    title="🎫 Ticket Transcript",
-                    description=f"Transcript for ticket: {channel.name}",
-                    color=discord.Color.blue()
-                )
-                transcript_content = "\n".join(messages[-20:]) 
-                if len(transcript_content) > 1024:
-                    transcript_content = transcript_content[-1024:]
-                transcript_embed.add_field(name="Recent Messages", value=f"```{transcript_content}```", inline=False)
+        await interaction.response.send_message("Generating transcript and closing ticket...", ephemeral=True)
+        
+        try:
+            transcript = await chat_exporter.export(
+                channel,
+                limit=None,
+                tz_info="UTC",
+                guild=interaction.guild,
+                bot=interaction.client
+            )
+            
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"ticket_{ticket_owner_id}_{timestamp}.html"
+            
+            cog = interaction.client.get_cog('Tickets')
+            transcript_url = await cog.upload_transcript(transcript, filename)
+            
+            if transcript_url:
+                if ticket_owner:
+                    try:
+                        embed = discord.Embed(
+                            title="🎫 Ticket Transcript",
+                            description=f"Your ticket `{channel.name}` has been closed.\nYou can view the full transcript using the button below.",
+                            color=discord.Color.blue()
+                        )
+                        embed.add_field(name="Closed by", value=interaction.user.mention, inline=True)
+                        embed.add_field(name="Closed at", value=discord.utils.format_dt(discord.utils.utcnow()), inline=True)
+                        
+                        await ticket_owner.send(embed=embed, view=TranscriptView(transcript_url))
+                    except discord.Forbidden:
+                        pass
                 
-                await ticket_owner.send(embed=transcript_embed)
-            except:
-                pass
-
-        await interaction.response.send_message("Ticket will be deleted in 5 seconds...", ephemeral=True)
-        await asyncio.sleep(5)
+                logs_channel = discord.utils.get(interaction.guild.channels, name="ticket-logs")
+                if logs_channel:
+                    log_embed = discord.Embed(
+                        title="🎫 Ticket Closed",
+                        description=f"Ticket `{channel.name}` has been closed.",
+                        color=discord.Color.orange()
+                    )
+                    log_embed.add_field(name="Ticket Owner", value=ticket_owner.mention if ticket_owner else "Unknown", inline=True)
+                    log_embed.add_field(name="Closed by", value=interaction.user.mention, inline=True)
+                    log_embed.add_field(name="Messages", value=str(len(await channel.history(limit=None).flatten())), inline=True)
+                    
+                    await logs_channel.send(embed=log_embed, view=TranscriptView(transcript_url))
+            
+        except Exception as e:
+            print(f"Error generating transcript: {e}")
+        
+        await asyncio.sleep(3)
         await channel.delete()
 
     @discord.ui.button(label='❌ Cancel', style=discord.ButtonStyle.red)
@@ -107,6 +145,28 @@ class ConfirmCloseView(discord.ui.View):
 class Tickets(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.website_upload_url = "https://archive.hytalemodding.xyz/api/upload-transcript"
+        self.website_view_url = "https://archive.hytalemodding.xyz/transcripts/"
+        self.upload_token = bot.upload_token
+
+    async def upload_transcript(self, transcript_html, filename):
+        """Upload transcript to your website and return the URL"""
+        try:
+            async with aiohttp.ClientSession() as session:
+                data = aiohttp.FormData()
+                data.add_field('file', transcript_html, filename=filename, content_type='text/html')
+                data.add_field('token', self.upload_token)
+                
+                async with session.post(self.website_upload_url, data=data) as response:
+                    if response.status == 200:
+                        result = await response.json()
+                        return f"{self.website_view_url}{filename}"
+                    else:
+                        print(f"Upload failed with status {response.status}")
+                        return None
+        except Exception as e:
+            print(f"Error uploading transcript: {e}")
+            return None
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -152,13 +212,7 @@ class Tickets(commands.Cog):
             return
 
         await interaction.channel.set_permissions(user, read_messages=True, send_messages=True)
-        
-        embed = discord.Embed(
-            title="✅ User Added",
-            description=f"{user.mention} has been added to this ticket.",
-            color=discord.Color.green()
-        )
-        await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(f"{user.mention} has been added to this ticket.")
 
     @app_commands.command(name="remove-user", description="Remove a user from the current ticket")
     @app_commands.describe(user="The user to remove from the ticket")
@@ -179,13 +233,7 @@ class Tickets(commands.Cog):
             return
 
         await interaction.channel.set_permissions(user, overwrite=None)
-        
-        embed = discord.Embed(
-            title="❌ User Removed",
-            description=f"{user.mention} has been removed from this ticket.",
-            color=discord.Color.red()
-        )
-        await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(f"{user.mention} has been removed from this ticket.")
 
     @app_commands.command(name="close", description="Close the current ticket")
     async def close_ticket_command(self, interaction: discord.Interaction):

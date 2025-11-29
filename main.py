@@ -10,6 +10,7 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix=".", intents=intents)
 
 bot.version = "v1.0"
+bot.upload_token = os.getenv("UPLOAD_TOKEN")
 
 async def load_cogs():
     for filename in os.listdir("./cogs"):
