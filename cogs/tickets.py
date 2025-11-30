@@ -174,7 +174,6 @@ class ConfirmCloseView(discord.ui.View):
                     
                     await logs_channel.send(embed=log_embed, view=TranscriptView(transcript_url))
                 
-                # Send to staff channel - same link, simple embed
                 staff_channel = interaction.guild.get_channel(1440173445739446366)
                 if staff_channel:
                     message_count = len(await channel.history(limit=None).flatten())
