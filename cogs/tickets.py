@@ -265,15 +265,10 @@ class Tickets(commands.Cog):
         target_channel = channel or interaction.channel
 
         embed = discord.Embed(
-            title="🎫 Support Tickets",
-            description="Click the button below to create a support ticket.\n\nOur staff team will assist you as soon as possible!",
+            description="Click the button below to create a ticket. This is for support regarding the server, or our libraries. For questions regarding how to Mod Hytale, please use the <#1440188811538862131> channel.",
             color=discord.Color.blue()
         )
-        embed.add_field(
-            name="📋 Before creating a ticket:",
-            value="• Check FAQ channels\n• Search for existing solutions\n• Be clear about your issue",
-            inline=False
-        )
+        embed.set_author(name="Ticket")
 
         await target_channel.send(embed=embed, view=TicketView())
         await interaction.response.send_message(f"Ticket panel created in {target_channel.mention}!", ephemeral=True)
