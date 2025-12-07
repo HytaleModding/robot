@@ -323,11 +323,11 @@ class Utils(commands.Cog):
                 continue
 
         twitter_patterns = [
-            r'https://(www\.)?twitter\.com/\S+',
-            r'https://(www\.)?x\.com/\S+',
-            r'https://vxtwitter\.com/\S+',
-            r'https://fxtwitter\.com/\S+',
-            r'https://nitter\.net/\S+',
+            r'https://(www\.)?twitter\.com/(\S+)',
+            r'https://(www\.)?x\.com/(\S+)',
+            r'https://vxtwitter\.com/(\S+)',
+            r'https://fxtwitter\.com/(\S+)',
+            r'https://nitter\.net/(\S+)',
         ]
         
         twitter_links = []
@@ -335,10 +335,14 @@ class Utils(commands.Cog):
         for pattern in twitter_patterns:
             matches = re.findall(pattern, content)
             for match in matches:
-                if 'twitter.com' in match or 'x.com' in match:
-                    path = re.search(r'(?:twitter|x)\.com(/\S+)', match)
-                    if path:
-                        xcancel_link = f"https://xcancel.com{path.group(1)}"
+                if isinstance(match, tuple):
+                    if len(match) == 2:
+                        path = match[1]
+                        xcancel_link = f"https://xcancel.com/{path}"
+                        twitter_links.append(xcancel_link)
+                    elif len(match) == 1:
+                        path = match[0]
+                        xcancel_link = f"https://xcancel.com/{path}"
                         twitter_links.append(xcancel_link)
                 else:
                     xcancel_link = re.sub(r'https://[^/]+', 'https://xcancel.com', match)
