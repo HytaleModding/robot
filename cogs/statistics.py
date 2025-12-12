@@ -21,9 +21,9 @@ class StatisticsCog(commands.Cog):
     @tasks.loop(minutes=5) 
     async def collect_stats(self):
         """Background task to collect server statistics"""
+        guild = self.bot.get_guild(1440173445039132724)
         try:
-            for guild in self.bot.guilds:
-                await self._collect_guild_stats(guild)
+            await self._collect_guild_stats(guild)
         except Exception as e:
             log.error(f"Error in stats collection: {e}")
     
