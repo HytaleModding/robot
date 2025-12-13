@@ -26,7 +26,12 @@ async def load_cogs():
 
 @bot.event
 async def on_ready():
-    bot.database = Database()
+    host = os.getenv("DB_HOST", "localhost")
+    port = int(os.getenv("DB_PORT", 3306))
+    user = os.getenv("DB_USER")
+    password = os.getenv("DB_PASSWORD")
+    database = os.getenv("DB_NAME")
+    bot.database = Database(host, port, user, password, database)
     await bot.database.init_db()
 
     await load_cogs()
