@@ -1,0 +1,45 @@
+name: Bug Report
+description: Create a new bug report.
+title: "[BUG]: "
+labels: ["bug", "awaiting review"]
+body:
+
+  - type: checkboxes
+    id: searched-issues
+    attributes:
+      label: Is there an existing issue for this?
+      description: 'Please search the issues to check if this bug has already been reported.'
+      options:
+      - label: I have searched the existing issues
+        required: true
+
+  - type: textarea
+    id: current-behavior
+    attributes:
+      label: What happened?
+      description: Describe the problem you are experiencing. Feel free to include screenshots if helpful.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: What do you expect to happen instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: optional-textarea
+    attributes:
+      label: Anything else? (Optional)
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: author-assignment
+    attributes:
+      label: Assignment
+      description: Check this box if you would like to be assigned to work on this issue.
+      options:
+        - label: I would like to be assigned to this issue
+          required: false
