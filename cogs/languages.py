@@ -39,11 +39,11 @@ class Languages(commands.Cog):
 
         if thread is None:
             thread = await self.translation_channel.create_thread(name=f"{language} Discussion", type=discord.ChannelType.private_thread, auto_archive_duration=None, reason=f"Translator thread for {language} created by {interaction.user}.", invitable=False)
-            thread.add_user(self.bot.fetch_user(702385226407608341)) # Add neil to the thread
-            thread.add_user(self.bot.fetch_user(614523861429387439)) # Add okuna to the thread
+            await thread.add_user(await self.bot.fetch_user(702385226407608341)) # Add neil to the thread
+            await thread.add_user(await self.bot.fetch_user(614523861429387439)) # Add okuna to the thread
             log.info(f"Created new translator thread for {language}")
 
-        thread.add_user(interaction.user)
+        await thread.add_user(interaction.user)
         await interaction.response.send_message(f"You have been added to the translator thread for {language}.", ephemeral=True)
 
     async def mention_translators(self, interaction: discord.Interaction, message: discord.Message) -> None:
