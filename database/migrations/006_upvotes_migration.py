@@ -2,7 +2,7 @@ from database.migration import Migration
 
 class UpvotesMigration(Migration):
     def __init__(self):
-        super().__init__(6, "Migrate upvotes table from user-showcase schema to showcase with count schema")
+        super().__init__(6, "Migrate upvotes table from user-showcase schema to showcase with count schema", [2])
     
     async def apply(self, connection) -> bool:
         """Migrate upvotes table structure if needed"""
