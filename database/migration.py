@@ -7,12 +7,13 @@ log = logging.getLogger(__name__)
 
 class Migration(ABC):
     """Base class for database migrations"""
-    
-    def __init__(self, migration_number: int, description: str):
+
+    def __init__(self, migration_number: int, description: str, depends: list[int] = []):
         self.migration_number = migration_number
         self.description = description
         self.applied_at: Optional[datetime] = None
-    
+        self.depends: list[int] = depends
+
     @abstractmethod
     async def apply(self, connection) -> bool:
         """Apply the migration. Return True if applied, False if already applied."""
@@ -34,13 +35,15 @@ class MigrationManager:
     def __init__(self, database):
         self.database = database
         self.migrations: Dict[int, Migration] = {}
+        self.dependencies: Dict[int, list[int]] = {}
     
     def register_migration(self, migration: Migration):
         """Register a migration"""
         if migration.migration_number in self.migrations:
             raise ValueError(f"Migration {migration.migration_number} already registered")
         self.migrations[migration.migration_number] = migration
-    
+        self.dependencies[migration.migration_number] = migration.depends
+
     async def init_migrations_table(self):
         """Create the migrations tracking table if it doesn't exist"""
         conn = await self.database.get_connection()
@@ -122,6 +125,13 @@ class MigrationManager:
             if migration_number not in applied_migrations:
                 log.info(f"Applying migration {migration.name}: {migration.description}")
                 
+                if migration.depends:
+                    log.info(f"Migration {migration.name} depends on {migration.depends}, checking dependencies")
+                    for dep_mig_num in migration.depends:
+                        if dep_mig_num not in applied_migrations:
+                            log.info(f"Dependency migration {dep_mig_num} not applied, applying it first")
+                            await self.run_migrations()  
+                            break 
                 try:
                     was_applied = await migration.apply(await self.database.get_connection())
                     if was_applied:
@@ -150,6 +160,13 @@ class MigrationManager:
         migration = self.migrations[migration_number]
         log.info(f"Rolling back migration {migration.name}")
         
+        dependants = self.get_dependants(migration_number)
+        if dependants:
+            log.info("Dependent migrations found, rolling them back first")
+            for dep_mig_num in dependants:
+                await self.rollback_migration(dep_mig_num)
+                log.info(f"Successfully rolled back dependent migration {dep_mig_num}")
+
         try:
             success = await migration.rollback(await self.database.get_connection())
             if success:
@@ -159,3 +176,15 @@ class MigrationManager:
         except Exception as e:
             log.error(f"Failed to rollback migration {migration.name}: {e}")
             raise
+
+    def get_dependants(self, migration_number: int) -> list[int]:
+        """Get a list of migrations that depend on the given migration"""
+        dependants = []
+        for mig_num, deps in self.dependencies.items():
+            if migration_number in deps:
+                dependants.append(mig_num)
+        return dependants
+    
+    def get_dependencies(self, migration_number: int) -> list[int]:
+        """Get a list of migrations that the given migration depends on"""
+        return self.dependencies.get(migration_number, [])
