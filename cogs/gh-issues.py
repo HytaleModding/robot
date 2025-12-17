@@ -8,7 +8,8 @@ class GitHubIssues(commands.Cog):
         self.bot: commands.Bot = bot
         self.known_repos = {
             'site': 'hytalemodding/site',
-            'robot': 'hytalemodding/robot'
+            'robot': 'hytalemodding/robot',
+            'archive': 'hytalemodding/archive',
         }
         self.github_api_base = 'https://api.github.com/repos'
         
