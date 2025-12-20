@@ -1,0 +1,41 @@
+name: Feature Request
+description: Suggest a new feature or an enhancement to an already existing feature.
+title: "[FEATURE]: "
+labels: ["enhancement"]
+body:
+
+  - type: textarea
+    id: feature-problem
+    attributes:
+      label: Why do you want this feature?
+      description: >-
+        Describe the motivation behind this request. Does it address a problem or limitation, or would it improve the bot, user, or server experience?
+      placeholder: >-
+        "I'm always frustrated when [...]", "There is currently no way to do [...]", "It would improve the experience if [...]", etc.
+    validations:
+      required: true
+
+  - type: textarea
+    id: feature-solution
+    attributes:
+      label: What would you like to see added, changed, or improved?
+      placeholder: >-
+        "Add a command that [...]", "It would help if the bot could [...]", etc.
+    validations:
+      required: true
+
+  - type: textarea
+    id: optional-textarea
+    attributes:
+      label: Anything else? (Optional)
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: author-assignment
+    attributes:
+      label: Assignment
+      description: Check this box if you would like to be assigned to work on this issue.
+      options:
+        - label: I would like to be assigned to this issue
+          required: false
