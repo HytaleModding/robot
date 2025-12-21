@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import TypeVar, Type, Optional
+from typing import TypeVar, Type
 
 from dotenv import load_dotenv
 
@@ -24,19 +24,19 @@ class EnvVarLoader:
 
     @classmethod
     def get_optional(cls, key: str, target_type: Type[EVT], *,
-                     default_value: Optional[EVT] = None) -> Optional[EVT]:
+                     default_value: EVT | None = None) -> EVT | None:
         """Get a typed environment variable or None.
 
         Args:
             key (str): The name of the environment variable.
             target_type (Type[EVT]): The type the value will be converted to.
-            default_value (Optional[EVT]): The value to use if the environment variable is not set. Defaults to None.
+            default_value (EVT | None): The value to use if the environment variable is not set. Defaults to None.
 
         Returns:
-            Optional[EVT]: The value of the environment variable with the provided target type if set
+            EVT | None: The value of the environment variable with the provided target type if set
             or the default value if provided, otherwise None.
         """
-        env_variable: Optional[EVT] = cls._resolve(key, target_type, True, default_value)
+        env_variable: EVT | None = cls._resolve(key, target_type, True, default_value)
 
         if env_variable is None:
             log.warning(f"Optional environment variable \"{key}\" is not set, some features might not work")
@@ -46,13 +46,13 @@ class EnvVarLoader:
 
     @classmethod
     def get_required(cls, key: str, target_type: Type[EVT], *,
-                     default_value: Optional[EVT] = None) -> EVT:
+                     default_value: EVT | None = None) -> EVT:
         """Get a typed environment variable.
 
         Args:
             key (str): The name of the environment variable.
             target_type (Type[EVT]): The type the value will be converted to.
-            default_value (Optional[EVT]): The value to use if the environment variable is not set. Defaults to None.
+            default_value (EVT | None): The value to use if the environment variable is not set. Defaults to None.
 
         Returns:
             EVT: The value of the environment variable with the provided target type.
@@ -60,7 +60,7 @@ class EnvVarLoader:
         Raises:
             MissingRequiredEnvVarException: If the required environment variable is not set.
         """
-        env_variable: Optional[EVT] = cls._resolve(key, target_type, True, default_value)
+        env_variable: EVT | None = cls._resolve(key, target_type, True, default_value)
 
         if env_variable is None:
             raise MissingRequiredEnvVarException(f"Required environment variable \"{key}\" is not set")
@@ -69,7 +69,7 @@ class EnvVarLoader:
 
     @classmethod
     def _resolve(cls, key: str, target_type: Type[EVT], required: bool,
-                 default_value: Optional[EVT]) -> Optional[EVT]:
+                 default_value: EVT | None) -> EVT | None:
         """Resolve an environment variable into a typed value.
 
         Lazy load dotenv, read the environment variable, and convert it to `target_type` if it is set,
@@ -83,15 +83,15 @@ class EnvVarLoader:
             target_type (Type[EVT]): The type the value will be converted to.
             required (bool): Whether the variable is considered required.
                 Used only for logging purposes.
-            default_value (Optional[EVT]): The value to use if the environment variable is not set.
+            default_value (EVT | None): The value to use if the environment variable is not set.
 
         Returns:
-            Optional[EVT]: The value of the environment variable with the provided target type if set
+            EVT | None: The value of the environment variable with the provided target type if set
             or the default value if provided, otherwise None.
         """
         cls._ensure_dotenv_loaded()
 
-        loaded_env_value: Optional[str] = os.getenv(key)
+        loaded_env_value: str | None = os.getenv(key)
 
         # Empty string is not a valid value for `loaded_env_value`
         if loaded_env_value:
