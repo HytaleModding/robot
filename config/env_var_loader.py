@@ -9,9 +9,20 @@ log = logging.getLogger(__name__)
 EVT = TypeVar("EVT", str, int, bool)
 
 class EnvVarLoaderException(Exception):
+    """This exception will be raised when the user provided environment variables lead to an error during loading.
+
+    This may be due to a missing required environment variable without a default value, or an environment variable value that cannot be converted to the expected type.
+
+    This should not be raised if there is an error due to invalid use of the loader in within the codebase.
+    """
     pass
 
 class EnvVarLoader:
+    """Utility class for loading and validating typed environment variables for Settings.
+
+    Optional environment variables that are missing without a default value return None with a warning.
+    Required variables that are missing without a default value raise an exception.
+    """
     _dotenv_loaded: bool = False
 
     @classmethod
