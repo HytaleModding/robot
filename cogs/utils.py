@@ -332,8 +332,8 @@ class Utils(commands.Cog):
                 continue
 
         twitter_patterns = [
-            r'https://(www\.)?twitter\.com/\S+',
-            r'https://(www\.)?x\.com/\S+',
+            r'https://(?:www\.)?twitter\.com/\S+',
+            r'https://(?:www\.)?x\.com/\S+',
             r'https://vxtwitter\.com/\S+',
             r'https://fxtwitter\.com/\S+',
             r'https://nitter\.net/\S+',
