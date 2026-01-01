@@ -19,6 +19,14 @@ class SettingsSchema:
     UPLOAD_TOKEN: str | None
     """str | None: Token for uploading ticket transcripts"""
 
+    LENIENT_CONFIG_LOADING: bool
+    """bool: Whether configuration should be loaded leniently
+    
+    When in lenient mode, the config loader will set the value of keys to None when a valid value cannot be read from the file instead of raising an error.
+    
+    This can be useful in a development environment.
+    """
+
 class Settings:
     _settings_instance: SettingsSchema | None = None
 
@@ -40,7 +48,9 @@ class Settings:
             DB_PASSWORD=EnvVarLoader.get_optional_str("DB_PASSWORD", default_value=""),
             DB_NAME=EnvVarLoader.get_optional_str("DB_NAME", default_value="moderation"),
 
-            UPLOAD_TOKEN=EnvVarLoader.get_optional_str("UPLOAD_TOKEN")
+            UPLOAD_TOKEN=EnvVarLoader.get_optional_str("UPLOAD_TOKEN"),
+
+            LENIENT_CONFIG_LOADING=EnvVarLoader.get_optional_bool("LENIENT_CONFIG_LOADING", default_value=False)
         )
 
         log.info(f"Loaded settings")
