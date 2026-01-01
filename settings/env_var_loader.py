@@ -4,6 +4,8 @@ from typing import TypeVar, cast
 
 from dotenv import load_dotenv
 
+from utils.typing_utils import convert_string_to_bool
+
 log = logging.getLogger(__name__)
 
 EVT = TypeVar("EVT", str, int, bool)
@@ -154,16 +156,7 @@ class EnvVarLoader:
             return int(value)
 
         elif target_type is bool:
-            return EnvVarLoader._str_to_bool(value)
+            return convert_string_to_bool(value)
 
         else:
             raise TypeError(f"Unsupported type \"{target_type}\" for converting env value string \"{value}\"")
-
-    @staticmethod
-    def _str_to_bool(value: str) -> bool:
-        if value.lower() in ("true", "yes", "1", "on"):
-            return True
-        elif value.lower() in ("false", "no", "0", "off"):
-            return False
-        else:
-            raise ValueError(f"Invalid literal for converting string to bool: \"{value}\"")
