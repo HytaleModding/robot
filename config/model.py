@@ -60,12 +60,12 @@ class LanguagesCogConfig:
             "example": "['Arabic', 'German', 'Latvian']"
         }
     )
-    proof_reader_user_ids: dict[str, list[int]] = field_constructor(
+    proof_reader_user_ids_by_language: dict[str, list[int]] = field_constructor(
         default_factory=dict,
         metadata={
             "doc":
                 "Map of languages and list of user IDs."
-                " Mapped list of users get extra permissions in the private language thread managed by languages cog.",
+                " Mapped list of users with extra permissions in the private language thread managed by languages cog.",
             "example": "{'German': [123, 127], 'Latvian': [131]}"
         }
     )
@@ -96,7 +96,7 @@ class Tag:
 
 @dataclass(frozen=True)
 class TagsCogConfig:
-    tags: dict[str, Tag] = field_constructor(
+    mentionable_tags: dict[str, Tag] = field_constructor(
         default_factory=dict,
         metadata={
             "doc":
@@ -138,6 +138,10 @@ class UtilsCogConfig:
     )
     github_updates_channel_id: int = field_constructor(
         metadata={"doc": "Channel ID. A channel to exclude for certain actions handled by utils cog."}
+    )
+    profanity_filter_whitelist: list[str] = field_constructor(
+        default_factory=list,
+        metadata={"doc": "List of words. Words to exclude from the profanity filter wordlist used by utils cog."}
     )
 
 

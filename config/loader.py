@@ -129,8 +129,8 @@ class Context:
         """Return currently_resolving_path as a string.
 
         Examples:
-            - cogs.tags.tags['bot'].url
-            - cogs.languages.proof_reader_user_ids['German'][0]
+            - cogs.mentionable_tags.mentionable_tags['bot'].url
+            - cogs.languages.proof_reader_user_ids_by_language['German'][0]
 
         Args:
             slice_last_n_segments (int): How many segments to slice off from the end.
@@ -199,7 +199,7 @@ class ResolveValueError(Exception):
         return (
             f"Unresolved value at path '{self.context.stringify_currently_resolving_path()}'"
             f" with expected type '{_stringify_type(self.type_)}': {self.reason}. Falling back to default value."
-            f"\n  Read data: {repr(self.data)}"
+            f" Read data: {repr(self.data)}"
         )
 
 
@@ -321,20 +321,22 @@ def _resolve_dataclass_value(dataclass_type: type[DataclassT], data: Any, contex
                 pushed_context
             )
 
-        if pushed_context.loading_mode is ConfigLoadingMode.TEMPLATE:
-            resolved_values[field.name] = _get_dataclass_field_template_value(field, dataclass_type, data, pushed_context)
-            continue
-
         try:
             resolved_values[field.name] = _get_dataclass_field_default_value(field, dataclass_type, pushed_context)
+            _log_error_with_context(
+                f"Used default value for dataclass field {_stringify_type(dataclass_type)}.{field.name} at"
+                    f" path {pushed_context.stringify_currently_resolving_path()}: {repr(resolved_values[field.name])}",
+                pushed_context
+            )
 
         except UnresolvedAndDefaultValueMissingError as defaultErr:
             _log_error_with_context(defaultErr, pushed_context)
 
-            assert pushed_context.loading_mode is not ConfigLoadingMode.TEMPLATE
             match pushed_context.loading_mode:
                 case ConfigLoadingMode.LENIENT:
                     resolved_values[field.name] = _get_dataclass_field_lenient_value(field, data, pushed_context)
+                case ConfigLoadingMode.TEMPLATE:
+                    resolved_values[field.name] = _get_dataclass_field_template_value(field, dataclass_type, data, pushed_context)
                 case _: # STRICT
                     raise ConfigLoaderFieldException(defaultErr.context)
 
