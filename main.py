@@ -34,7 +34,10 @@ async def on_connect():
 
 @bot.event
 async def on_ready():
-    bot.staff_role = bot.get_guild(1440173445039132724).get_role(1440793371529449614) # TODO: optimize
+    # I just left it here like this for now, can be cleaned up later
+    config = Config.get()
+    bot.staff_role = bot.get_guild(config.core.guild_id).get_role(config.cogs.tickets.staff_role_id) # TODO: optimize
+
     try:
         await bot.database.init_db()
     except Exception as databaseErr:
@@ -70,5 +73,7 @@ if __name__ == "__main__":
     )
 
     bot.upload_token = settings.UPLOAD_TOKEN
+
+    bot.config = Config.get()
 
     bot.run(token=settings.TOKEN, log_handler=None)

@@ -3,10 +3,15 @@ from discord import app_commands
 from discord.ext import commands
 from datetime import datetime, timedelta
 
+from config import ConfigSchema
+
+
 class Moderation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.db = bot.database
+        self.config: ConfigSchema = bot.config
+        self.cog_config = self.config.cogs.mod
     
     async def log_to_channel(self, guild: discord.Guild, embed: discord.Embed):
         """Send log embed to configured mod log channel"""
@@ -346,19 +351,7 @@ class Moderation(commands.Cog):
 
     @warn.autocomplete("rule")
     async def rule_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
-        rules = [
-            "Rule §1. No harassment of other players or moderators.",
-            "Rule §2. Keep all discussion civil.",
-            "Rule §3. Keep personal drama out of the server.",
-            "Rule §4. No impersonation of other users, moderators, administrators, or known figures.",
-            "Rule §5. No spamming of any kind.",
-            "Rule §6. No NSFW content.",
-            "Rule §7. No breaking of Discord ToS.",
-            "Rule §8. No talking about piracy, torrenting etc.",
-            "Rule §9. Avoid political discussion.",
-            "Rule §10. No inappropriate or offensive usernames, status's or profile pictures.",
-            "Rule §11. Don't evade filters."
-        ]
+        rules = self.cog_config.rules
         return [
             app_commands.Choice(name=rule, value=rule)
             for rule in rules if current.lower() in rule.lower()

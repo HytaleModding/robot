@@ -1,20 +1,16 @@
-import discord
-from discord import app_commands
-from discord.ext import commands
-
 import re
 
-WHITELISTED_ROLE_IDS = [
-    1440793371529449614, # Staff Team
-    1443904548736335964, # Sponsor
-    1441105574124322886, # Server Boosters
-    1442682439456653334, # Content Creators
-    1442149158390595698 # Invite Links Bypass
-]
+import discord
+from discord.ext import commands
+
+from config import ConfigSchema
+
 
 class AutoMod(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.config: ConfigSchema = bot.config
+        self.cog_config = self.config.cogs.automod
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -22,7 +18,7 @@ class AutoMod(commands.Cog):
         if message.author.bot:
             return
 
-        if any(role.id in WHITELISTED_ROLE_IDS for role in message.author.roles) or message.author.guild_permissions.administrator:
+        if any(role.id in self.cog_config.whitelisted_role_ids for role in message.author.roles) or message.author.guild_permissions.administrator:
             return
 
         DISCORD_INVITE_URL_REGEX = r"(https?:\/\/)?(www\.)?(discord\.gg|discordapp\.com\/invite)\/[a-zA-Z0-9]+"

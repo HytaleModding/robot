@@ -3,27 +3,17 @@ from discord.ext import commands
 import aiohttp
 import re
 
+from config import ConfigSchema
+
+
 class GitHubIssues(commands.Cog):
     def __init__(self, bot):
         self.bot: commands.Bot = bot
-        self.known_repos = {
-            'site': 'hytalemodding/site',
-            'robot': 'hytalemodding/robot',
-            'archive': 'hytalemodding/archive',
-            'patcher': 'hytalemodding/patcher'
-        }
+        self.config: ConfigSchema = bot.config
+
         self.github_api_base = 'https://api.github.com/repos'
-        
-        self.status_emojis = {
-            'pr_open': '<:PROpen:1441898066830430218>',
-            'pr_closed': '<:PRClosed:1441898059071230043>',
-            'pr_merged': '<:PRMerged:1441898064779546726>',
-            'pr_draft': '<:PRDraft:1441898061830819970>',
-            'issue_closed': '<:IssueClosed:1441898085616713818>',
-            'issue_not_planned': '<:IssueNotPlanned:1441898087802077214>',
-            'issue_open': '<:IssueOpen:1441898090234646598>',
-            'commit': '📝'
-        }
+        self.known_repos = self.config.cogs.gh_issues.known_repos
+        self.status_emojis = self.config.cogs.gh_issues.status_emojis
 
     @commands.Cog.listener()
     async def on_message(self, message):

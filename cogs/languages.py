@@ -4,27 +4,24 @@ from discord.ext import commands
 
 import logging
 
-log = logging.getLogger(__name__)
+from config import ConfigSchema
 
-TRANSLATOR_CHANNEL = 1446878843250938019
-LANGUAGES = ["Afrikaans", "Arabic", "Danish", "Dutch", "French", "German", "Hindi", "Hungarian", "Indonesian", "Italian", "Japanese", "Latvian", "Lithuanian", "Polish", "Portuguese, Brazilian", "Romanian", "Russian", "Spanish", "Swedish", "Turkish", "Ukrainian", "Vietnamese"]
-# day 1 of writing bad code with neil - i'm too lazy i'm sorry, but it works for now. will revamp all this later.
-PROOF_READERS = {
-    "Russian": [754700328359821333, 415132870252822539],
-    "Portuguese, Brazilian": [174997562938490881],
-    "German": [643536207623618589],
-    "Italian": [272696705441464321, 326358930517262347],
-    "Danish": [1196432298141306914],
-    "Latvian": [251860306467356673],
-    "Spanish": [1455487255996272692],
-    "Ukrainian": [1242082598281281629]
-}
+log = logging.getLogger(__name__)
 
 class Languages(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot: commands.Bot = bot
         self.db = bot.database
-        self.translation_channel: discord.TextChannel = self.bot.get_channel(TRANSLATOR_CHANNEL)
+        self.config: ConfigSchema = bot.config
+        self.cog_config = self.config.cogs.languages
+
+        self.translation_channel: discord.TextChannel = self.bot.get_channel(self.cog_config.translator_channel_id)
+
+        # Other decorators are applied already in class definition so this is fine
+        translator_command_choices_decorator = app_commands.choices(
+            language=[app_commands.Choice(name=lang, value=lang) for lang in self.cog_config.languages]
+        )
+        self.translator = translator_command_choices_decorator(self.translator)
 
         self.mention_translators_menu = app_commands.ContextMenu(
             name="Mention Translators",
@@ -34,7 +31,6 @@ class Languages(commands.Cog):
 
     @app_commands.command()
     @app_commands.describe(language="Select the language you translate to")
-    @app_commands.choices(language=[app_commands.Choice(name=lang, value=lang) for lang in LANGUAGES])
     async def translator(self, interaction: discord.Interaction, language: str):
         thread: discord.Thread = None
         for t in self.translation_channel.threads: # for people looking at this, I know it's not the best way but it works dynamically and I don't have to hard code IDs.
@@ -44,8 +40,8 @@ class Languages(commands.Cog):
 
         if thread is None:
             thread = await self.translation_channel.create_thread(name=f"{language} Discussion", type=discord.ChannelType.private_thread, auto_archive_duration=None, reason=f"Translator thread for {language} created by {interaction.user}.", invitable=False)
-            await thread.add_user(await self.bot.fetch_user(702385226407608341)) # Add neil to the thread
-            await thread.add_user(await self.bot.fetch_user(614523861429387439)) # Add okuna to the thread
+            for user_id in self.cog_config.thread_watcher_user_ids:
+                await thread.add_user(await self.bot.fetch_user(user_id)) # This is fine if it's like below 5 users
             log.info(f"Created new translator thread for {language}")
 
         await thread.add_user(interaction.user)
@@ -59,14 +55,15 @@ class Languages(commands.Cog):
             return
         
         channel: discord.Thread = interaction.channel
-        if channel.parent_id != 1446878843250938019:
+        if channel.parent_id != self.cog_config.translator_channel_id:
             await interaction.response.send_message(
                 "This message is not in a translator thread.", ephemeral=True
             )
             return
         
         language = channel.name.replace(" Discussion", "")
-        proofreaders = PROOF_READERS.get(language, [])
+        # `thread_watcher_user_ids` could also be added here, or maybe a new core config option for staff users or roles
+        proofreaders = self.cog_config.proof_reader_user_ids_by_language.get(language, [])
         if interaction.user.id not in proofreaders:
             await interaction.response.send_message(
                 "You are not authorized to mention translators for this language.", ephemeral=True
