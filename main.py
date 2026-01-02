@@ -20,7 +20,6 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix=".", intents=intents)
 
 bot.version = "v1.0"
-bot.upload_token = os.getenv("UPLOAD_TOKEN")
 
 async def load_cogs():
     for filename in os.listdir("./cogs"):
@@ -35,17 +34,11 @@ async def on_connect():
 
 @bot.event
 async def on_ready():
-    host = os.getenv("DB_HOST", "localhost")
-    port = int(os.getenv("DB_PORT", 3306))
-    user = os.getenv("DB_USER")
-    password = os.getenv("DB_PASSWORD")
-    database = os.getenv("DB_NAME")
-    bot.database = Database(host, port, user, password, database)
     bot.staff_role = bot.get_guild(1440173445039132724).get_role(1440793371529449614) # TODO: optimize
     try:
         await bot.database.init_db()
-    except Exception as e:
-        log.critical(f"A critical error occurred while initializing the database: {e}")
+    except Exception as databaseErr:
+        log.critical(f"A critical error occurred while initializing the database: {databaseErr}")
         await bot.close()
         return
 
@@ -66,4 +59,16 @@ if __name__ == "__main__":
         log.critical(e)
         sys.exit(1)
 
-    bot.run(token=os.getenv("TOKEN"), log_handler=None)
+    settings = Settings.get()
+
+    bot.database = Database(
+        settings.DB_HOST,
+        settings.DB_PORT,
+        settings.DB_USER,
+        settings.DB_PASSWORD,
+        settings.DB_NAME
+    )
+
+    bot.upload_token = settings.UPLOAD_TOKEN
+
+    bot.run(token=settings.TOKEN, log_handler=None)
