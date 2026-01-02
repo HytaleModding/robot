@@ -1,11 +1,15 @@
+import logging
+import os
+import sys
+
 import discord
 from discord.ext import commands
-
-import os
-import logging
 from dotenv import load_dotenv
+
+from config import Config
 from database import Database
 from logging_configuration import setup_logging
+from settings import Settings
 
 load_dotenv()
 
@@ -55,4 +59,11 @@ async def on_command_error(ctx: commands.Context, error: commands.CommandError):
         pass
 
 if __name__ == "__main__":
+    try:
+        Settings.init()
+        Config.init()
+    except Exception as e:
+        log.critical(e)
+        sys.exit(1)
+
     bot.run(token=os.getenv("TOKEN"), log_handler=None)
