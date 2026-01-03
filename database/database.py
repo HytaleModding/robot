@@ -12,8 +12,7 @@ log = logging.getLogger(__name__)
 warnings.filterwarnings("ignore", category=MySQLWarning)
 
 class Database:
-    def __init__(self, host: str = "localhost", port: int = 3306,
-                 user: str = "root", password: str = "", database: str = "moderation"):
+    def __init__(self, host: str, port: int, user: str | None, password: str, database: str | None):
         self.host = host
         self.port = port
         self.user = user

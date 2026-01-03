@@ -1,9 +1,15 @@
 import discord
 from discord.ext import commands
 
+from config import ConfigSchema
+
+
 class AutoThread(commands.Cog):
     def __init__(self, bot):
         self.bot: commands.Bot = bot
+        self.config: ConfigSchema = bot.config
+        self.cog_config = self.config.cogs.auto_thread
+
         self._last_member = None
 
     @commands.Cog.listener()
@@ -11,7 +17,7 @@ class AutoThread(commands.Cog):
         if message.author.bot:
             return
         
-        if message.channel.id == 1440185755745124503:
+        if message.channel.id == self.cog_config.showcase_channel_id:
             await message.add_reaction('🔥')
             await message.create_thread(
                 name=f"Discussion - {message.author.display_name}",

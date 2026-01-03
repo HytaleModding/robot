@@ -1,6 +1,8 @@
 import asyncio
 import discord
 from discord.ext import commands, tasks
+
+from config import ConfigSchema
 from database import Database
 from datetime import datetime
 
@@ -12,6 +14,8 @@ class StatisticsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.db = bot.database
+        self.config: ConfigSchema = bot.config
+
         self.collect_stats.start()
     
     def cog_unload(self):
@@ -21,7 +25,7 @@ class StatisticsCog(commands.Cog):
     @tasks.loop(minutes=5) 
     async def collect_stats(self):
         """Background task to collect server statistics"""
-        guild = self.bot.get_guild(1440173445039132724)
+        guild = self.bot.get_guild(self.config.core.guild_id)
         try:
             await self._collect_guild_stats(guild)
         except Exception as e:
