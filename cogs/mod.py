@@ -85,7 +85,7 @@ class Moderation(commands.Cog):
         for idx, warn in enumerate(warnings[:10], 1):
             mod = interaction.guild.get_member(warn['moderator_id'])
             mod_name = mod.mention if mod else f"ID: {warn['moderator_id']}"
-            timestamp = datetime.fromisoformat(warn['timestamp']).strftime("%Y-%m-%d %H:%M UTC")
+            timestamp = warn['timestamp'].strftime("%Y-%m-%d %H:%M UTC")
             
             embed.add_field(
                 name=f"Warning #{warn['id']} - {timestamp}",
@@ -312,8 +312,8 @@ class Moderation(commands.Cog):
         for idx, action in enumerate(history[:10], 1):
             mod = interaction.guild.get_member(action['moderator_id'])
             mod_name = mod.mention if mod else f"ID: {action['moderator_id']}"
-            timestamp = datetime.fromisoformat(action['timestamp']).strftime("%Y-%m-%d %H:%M UTC")
-            
+            timestamp = action['timestamp'].strftime("%Y-%m-%d %H:%M UTC")
+
             duration = f" ({action['duration']} min)" if action['duration'] else ""
             embed.add_field(
                 name=f"{action['action_type'].upper()}{duration} - {timestamp}",
