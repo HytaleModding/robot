@@ -61,6 +61,7 @@ class Moderation(commands.Cog):
             )
             dm_embed.add_field(name="Reason", value=reason, inline=False)
             dm_embed.add_field(name="Total Warnings", value=f"{warning_count}", inline=False)
+            dm_embed.set_footer(text="Create a support ticket to dispute this warning.", icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
             await member.send(embed=dm_embed)
         except:
             pass
