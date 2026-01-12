@@ -7,7 +7,7 @@ import logging
 log = logging.getLogger(__name__)
 
 TRANSLATOR_CHANNEL = 1446878843250938019
-LANGUAGES = ["Afrikaans", "Arabic", "Danish", "Dutch", "French", "German", "Hindi", "Hungarian", "Indonesian", "Italian", "Japanese", "Latvian", "Lithuanian", "Polish", "Portuguese, Brazilian", "Romanian", "Russian", "Spanish", "Swedish", "Turkish", "Ukranian", "Vietnamese"]
+LANGUAGES = ["Afrikaans", "Arabic", "Danish", "Dutch", "French", "German", "Hindi", "Hungarian", "Indonesian", "Italian", "Japanese", "Latvian", "Lithuanian", "Polish", "Portuguese, Brazilian", "Romanian", "Russian", "Spanish", "Swedish", "Turkish", "Ukrainian", "Vietnamese"]
 # day 1 of writing bad code with neil - i'm too lazy i'm sorry, but it works for now. will revamp all this later.
 PROOF_READERS = {
     "Russian": [754700328359821333, 415132870252822539],
@@ -16,7 +16,8 @@ PROOF_READERS = {
     "Italian": [272696705441464321, 326358930517262347],
     "Danish": [1196432298141306914],
     "Latvian": [251860306467356673],
-    "Spanish": [1455487255996272692]
+    "Spanish": [1455487255996272692],
+    "Ukrainian": [1242082598281281629]
 }
 
 class Languages(commands.Cog):
