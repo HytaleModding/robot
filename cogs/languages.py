@@ -12,7 +12,11 @@ LANGUAGES = ["Afrikaans", "Arabic", "Danish", "Dutch", "French", "German", "Hind
 PROOF_READERS = {
     "Russian": [754700328359821333, 415132870252822539],
     "Portuguese, Brazilian": [174997562938490881],
-    "German": [643536207623618589]
+    "German": [643536207623618589],
+    "Italian": [272696705441464321, 326358930517262347],
+    "Danish": [1196432298141306914],
+    "Latvian": [251860306467356673],
+    "Spanish": [1455487255996272692]
 }
 
 class Languages(commands.Cog):
