@@ -326,7 +326,7 @@ class Utils(commands.Cog):
                     attachment_text = f"\n\n📎 {len(target_message.attachments)} attachment(s)"
                     embed.description += attachment_text
 
-                await message.reply(embed=embed, mention_author=False)
+                await message.reply(embed=embed, mention_author=False, allowed_mentions=discord.AllowedMentions.none())
 
             except (discord.NotFound, discord.Forbidden, discord.HTTPException):
                 continue
@@ -355,7 +355,7 @@ class Utils(commands.Cog):
         
         if twitter_links:
             links_text = '\n'.join([f"<{link}>" for link in twitter_links])
-            await message.reply(f"{links_text}\n-# This is a link that makes it more convenient to share X tweets. XCancel allows you to view tweets without signing in", mention_author=False)
+            await message.reply(f"{links_text}\n-# This is a link that makes it more convenient to share X tweets. XCancel allows you to view tweets without signing in", mention_author=False, allowed_mentions=discord.AllowedMentions.none())
 
 async def setup(bot):
     await bot.add_cog(Utils(bot))
