@@ -33,7 +33,8 @@ class AutoMod(commands.Cog):
             )
             clean_content = re.sub(DISCORD_INVITE_URL_REGEX, "[invite link removed]", message.content)
             await message.channel.send(
-                f"Cleaned message from {message.author.mention}: \n\n{clean_content}"
+                f"Cleaned message from {message.author.mention}: \n\n{clean_content}",
+                allowed_mentions=discord.AllowedMentions.none()
             ) 
 
 
