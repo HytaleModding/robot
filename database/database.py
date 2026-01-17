@@ -134,19 +134,78 @@ class Database:
                 return cursor.rowcount > 0
         finally:
             conn.close()
-    
-    async def clear_warnings(self, guild_id: int, user_id: int) -> int:
+
+    # Points system methods
+    async def award_points(self, guild_id: int, user_id: int, awarded_by: int, points: int, reason: str, thread_id: int = None) -> bool:
+        """Award points to a user"""
+        conn = await self.get_connection()
+        try:
+            async with conn.cursor() as cursor:
+                # Insert or update user points
+                await cursor.execute("""
+                    INSERT INTO user_points (guild_id, user_id, points, last_updated)
+                    VALUES (%s, %s, %s, NOW())
+                    ON DUPLICATE KEY UPDATE
+                    points = points + VALUES(points),
+                    last_updated = NOW()
+                """, (guild_id, user_id, points))
+                
+                # Record the transaction
+                await cursor.execute("""
+                    INSERT INTO point_transactions (guild_id, user_id, awarded_by, points, reason, thread_id, timestamp)
+                    VALUES (%s, %s, %s, %s, %s, %s, NOW())
+                """, (guild_id, user_id, awarded_by, points, reason, thread_id))
+                
+                return True
+        finally:
+            conn.close()
+
+    async def get_user_points(self, guild_id: int, user_id: int) -> int:
+        """Get a user's total points"""
         conn = await self.get_connection()
         try:
             async with conn.cursor() as cursor:
                 await cursor.execute(
-                    "DELETE FROM warnings WHERE guild_id = %s AND user_id = %s",
+                    "SELECT points FROM user_points WHERE guild_id = %s AND user_id = %s",
                     (guild_id, user_id)
                 )
-                return cursor.rowcount
+                result = await cursor.fetchone()
+                return result[0] if result else 0
         finally:
             conn.close()
-    
+
+    async def get_points_leaderboard(self, guild_id: int, limit: int = 10) -> List[Dict]:
+        """Get points leaderboard for a guild"""
+        conn = await self.get_connection()
+        try:
+            async with conn.cursor(aiomysql.DictCursor) as cursor:
+                await cursor.execute("""
+                    SELECT user_id, points, last_updated 
+                    FROM user_points 
+                    WHERE guild_id = %s AND points > 0
+                    ORDER BY points DESC 
+                    LIMIT %s
+                """, (guild_id, limit))
+                return await cursor.fetchall()
+        finally:
+            conn.close()
+
+    async def get_user_point_history(self, guild_id: int, user_id: int, limit: int = 10) -> List[Dict]:
+        """Get a user's point transaction history"""
+        conn = await self.get_connection()
+        try:
+            async with conn.cursor(aiomysql.DictCursor) as cursor:
+                await cursor.execute("""
+                    SELECT points, reason, thread_id, timestamp, awarded_by
+                    FROM point_transactions 
+                    WHERE guild_id = %s AND user_id = %s
+                    ORDER BY timestamp DESC 
+                    LIMIT %s
+                """, (guild_id, user_id, limit))
+                return await cursor.fetchall()
+        finally:
+            conn.close()
+
     # Mod actions log
     async def log_action(self, guild_id: int, action_type: str, user_id: int, 
                         moderator_id: int, reason: str = None, duration: int = None):
