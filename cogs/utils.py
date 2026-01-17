@@ -5,11 +5,17 @@ import re
 
 from better_profanity import profanity
 
+from config import ConfigSchema
+
+
 class Utils(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.db = bot.database
-        profanity.load_censor_words(whitelist_words=["hytale", "hypixel", "mcc", "mcp", "mcpe", "minecraft", "fuck", "fucking", "shit", "bullshit", "bs", "idiot", "dumb"])
+        self.config: ConfigSchema = bot.config
+        self.cog_config = self.config.cogs.utils
+
+        profanity.load_censor_words(whitelist_words=self.cog_config.profanity_filter_whitelist)
 
     @app_commands.command(
         name="cooldown",
@@ -48,7 +54,7 @@ class Utils(commands.Cog):
     )
     async def follow_thread(self, interaction: discord.Interaction):
         """Follow the current thread to get notifications when the owner makes announcements."""
-        if not isinstance(interaction.channel, discord.Thread) and interaction.channel_id != 1444683282246668440:
+        if not isinstance(interaction.channel, discord.Thread) and interaction.channel_id != self.cog_config.website_project_channel_id:
             await interaction.response.send_message(
             "This command can only be used in threads.",
             ephemeral=True
@@ -83,7 +89,7 @@ class Utils(commands.Cog):
     )
     async def unfollow_thread(self, interaction: discord.Interaction):
         """Stop following the current thread."""
-        if not isinstance(interaction.channel, discord.Thread) and interaction.channel_id != 1444683282246668440:
+        if not isinstance(interaction.channel, discord.Thread) and interaction.channel_id != self.cog_config.website_project_channel_id:
             await interaction.response.send_message(
                 "This command can only be used in threads.",
                 ephemeral=True
@@ -111,15 +117,17 @@ class Utils(commands.Cog):
     )
     async def announce_to_followers(self, interaction: discord.Interaction):
         """Ping all followers of this thread. Only the thread owner can use this."""
-        if interaction.channel_id == 1444683282246668440:
+        if interaction.channel_id == self.cog_config.website_project_channel_id:
             if not interaction.user.guild_permissions.administrator:
                 await interaction.response.send_message(
                     "Only administrators can use this command in this thread.",
                     ephemeral=True
                 )
                 return
-            
-            followers = await self.db.get_thread_followers(thread.id)
+
+            website_project_channel = interaction.channel
+
+            followers = await self.db.get_thread_followers(website_project_channel.id)
         
             if not followers:
                 await interaction.response.send_message(
@@ -141,7 +149,7 @@ class Utils(commands.Cog):
                 
                 for chunk in follower_chunks:
                     chunk_mentions = " ".join([f"<@{user_id}>" for user_id in chunk])
-                    await thread.send(chunk_mentions)
+                    await website_project_channel.send(chunk_mentions)
             else:
                 await interaction.response.send_message(mentions)
             return
@@ -155,7 +163,7 @@ class Utils(commands.Cog):
 
         thread = interaction.channel
         
-        if thread.owner_id != interaction.user.id or any(role.id == 1440180775512178750 for role in interaction.user.roles):
+        if thread.owner_id != interaction.user.id or any(role.id == self.cog_config.admin_role_id for role in interaction.user.roles):
             await interaction.response.send_message(
                 "Only the thread owner can send announcements.",
                 ephemeral=True
@@ -194,7 +202,7 @@ class Utils(commands.Cog):
     )
     async def list_followers(self, interaction: discord.Interaction):
         """List all followers of the current thread. Only the thread owner can use this."""
-        if interaction.channel_id == 1444683282246668440:
+        if interaction.channel_id == self.cog_config.website_project_channel_id:
             if not interaction.user.guild_permissions.administrator:
                 await interaction.response.send_message(
                     "Only administrators can use this command in this thread.",
@@ -238,7 +246,7 @@ class Utils(commands.Cog):
 
         thread = interaction.channel
 
-        if thread.owner_id != interaction.user.id or any(role.id == 1440180775512178750 for role in interaction.user.roles):
+        if thread.owner_id != interaction.user.id or any(role.id == self.cog_config.admin_role_id for role in interaction.user.roles):
             await interaction.response.send_message(
                 "Only the thread owner can view the followers list.",
                 ephemeral=True
@@ -276,7 +284,7 @@ class Utils(commands.Cog):
         if message.author.bot:
             return
         
-        if message.channel.id == 1440984193181028394:
+        if message.channel.id == self.cog_config.github_updates_channel_id:
             if len(message.embeds) < 1:
                 return
             
@@ -291,7 +299,7 @@ class Utils(commands.Cog):
         for match in matches:
             guild_id, channel_id, message_id = map(int, match)
 
-            if guild_id != 1440173445039132724:
+            if guild_id != self.config.core.guild_id:
                 continue
 
             try:

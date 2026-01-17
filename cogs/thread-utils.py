@@ -2,11 +2,14 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from typing import List
+from config import ConfigSchema
 
 
 class ThreadUtils(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.config: ConfigSchema = bot.config
+        self.cog_config = self.config.cogs.thread_utils
 
         self.pin_menu = app_commands.ContextMenu(
             name="Pin Message",
@@ -40,7 +43,7 @@ class ThreadUtils(commands.Cog):
             )
             return
 
-        if interaction.channel.parent_id != 1440188811538862131:
+        if interaction.channel.parent_id != self.cog_config.modding_help_channel_id:
             await interaction.response.send_message(
                 "This command can only be used in the modding-help forum.", ephemeral=True
             )

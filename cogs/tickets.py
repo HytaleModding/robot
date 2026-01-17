@@ -11,6 +11,8 @@ from datetime import datetime
 import re
 import logging
 
+from config import ConfigSchema
+
 log = logging.getLogger(__name__)
 
 class TicketView(discord.ui.View):
@@ -109,6 +111,7 @@ class ConfirmCloseView(discord.ui.View):
         channel = interaction.channel
         cog = interaction.client.get_cog('Tickets')
         db = cog.bot.database
+        config: ConfigSchema = cog.bot.config
         
         ticket_info = await db.get_ticket_by_channel(channel.id)
         if not ticket_info:
@@ -150,7 +153,7 @@ class ConfirmCloseView(discord.ui.View):
                     except discord.Forbidden:
                         pass
                 
-                logs_channel = interaction.guild.get_channel(1446583632465760456)
+                logs_channel = interaction.guild.get_channel(config.cogs.tickets.logs_channel_id)
                 if logs_channel:
                     await logs_channel.send(embed=embed, view=TranscriptView(transcript_url))
                 
@@ -167,22 +170,26 @@ class ConfirmCloseView(discord.ui.View):
 class Tickets(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.website_upload_url = "https://archive.hytalemodding.xyz/api/upload-transcript"
-        self.website_view_url = "https://archive.hytalemodding.xyz/transcripts/"
+        self.config: ConfigSchema = bot.config
+        self.cog_config = self.config.cogs.tickets
+
         self.upload_token = bot.upload_token
 
     async def upload_transcript(self, transcript_html, filename):
         """Upload transcript to your website and return the URL"""
         try:
+            if self.cog_config.website_upload_url is None or self.cog_config.website_view_url is None:
+                raise ValueError("Website upload and view URL must be set")
+
             async with aiohttp.ClientSession() as session:
                 data = aiohttp.FormData()
                 data.add_field('file', transcript_html, filename=filename, content_type='text/html')
                 data.add_field('token', self.upload_token)
                 
-                async with session.post(self.website_upload_url, data=data) as response:
+                async with session.post(self.cog_config.website_upload_url, data=data) as response:
                     if response.status == 200:
                         result = await response.json()
-                        return f"{self.website_view_url}{filename}"
+                        return f"{self.cog_config.website_view_url}{filename}"
                     else:
                         log.error(f"Upload failed with status {response.status}")
                         return None
