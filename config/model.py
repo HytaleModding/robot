@@ -106,6 +106,11 @@ class TagsCogConfig:
         }
     )
 
+@dataclass(frozen=True)
+class ThreadUtilsCogConfig:
+    modding_help_channel_id: int = field_constructor(
+        metadata={"doc": "Channel ID. Used to restrict actions handled by thread utils cog to this channel."}
+    )
 
 @dataclass(frozen=True)
 class TicketsCogConfig:
@@ -153,6 +158,7 @@ class CogsConfig:
     languages: LanguagesCogConfig
     mod: ModCogConfig
     tags: TagsCogConfig
+    thread_utils: ThreadUtilsCogConfig
     tickets: TicketsCogConfig
     utils: UtilsCogConfig
 
