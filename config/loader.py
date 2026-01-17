@@ -170,7 +170,7 @@ class ConfigLoaderException(Exception):
         self.reason = reason
 
     def __str__(self) -> str:
-        return f"Failed to load config{(": " + self.reason) if self.reason else ""}"
+        return f"Failed to load config: " + self.reason if self.reason else "" 
 
 
 class ConfigLoaderFieldException(ConfigLoaderException):
@@ -495,9 +495,9 @@ def _get_dataclass_field_template_value(
     metadata = _get_field_metadata(field)
     return (
         f"EXPECTING VALUE OF TYPE '{_stringify_type(field.type)}'"
-        f"{", Default: "+repr(default_value) if default_value is not MISSING else ""}"
-        f"{", Info: "+metadata["doc"] if metadata["doc"] else ""}"
-        f"{(", Example: "+metadata["example"]) if metadata["example"] else ""}"
+        f"{', Default: ' +repr(default_value) if default_value is not MISSING else ''}"
+        f"{', Info: ' +metadata['doc'] if metadata['doc'] else ''}"
+        f"{', Example: ' +metadata['example'] if metadata['example'] else ''}"
     )
 
 # ==================================================
