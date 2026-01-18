@@ -43,6 +43,7 @@ When submitting a pull request, make sure the related issue is tagged correctly.
 - Python 3.11 or higher
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) Python package and project manager
 - A Discord bot application and a test server for development and testing
+- Access to a MySQL database
 
 ### Local Development Setup
 
@@ -52,11 +53,15 @@ When submitting a pull request, make sure the related issue is tagged correctly.
     ```bash
     uv sync
     ```
-4. Copy `.env.example` to `.env` and replace the TOKEN variable with your bot token.
+4. Copy `.env.example` to `.env` and configure the required environment variables:
+    - A Discord bot token (TOKEN)
+    - Database connection variables (see the settings module for details)
 5. Start the bot:
     ```bash
     uv run main.py
     ```
+6. Fill out all required values of the generated `config_template.json` and copy it to `config.json` before restarting the bot when starting it for the first time.
+    - When running the bot with docker, make sure to mount the root directory to the docker working directory with `-v /<path-to-robot>:/app`
    
 ## Submitting Changes
 
