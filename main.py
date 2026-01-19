@@ -4,6 +4,7 @@ import sys
 
 import discord
 from discord.ext import commands
+from discord.ext.commands import ExtensionError
 from dotenv import load_dotenv
 
 from config import Config
@@ -24,8 +25,11 @@ bot.version = "v1.0"
 async def load_cogs():
     for filename in os.listdir("./cogs"):
         if filename.endswith(".py"):
-            await bot.load_extension(f"cogs.{filename[:-3]}")
-            log.info(f"Loaded cog: {filename}")
+            try:
+                await bot.load_extension(f"cogs.{filename[:-3]}")
+                log.info(f"Loaded cog: {filename}")
+            except ExtensionError as cogErr:
+                log.exception(f"Failed to load cog {filename}: {cogErr}")
 
 @bot.event
 async def on_connect():
