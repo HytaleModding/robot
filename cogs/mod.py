@@ -35,6 +35,7 @@ class Moderation(commands.Cog):
     @app_commands.command(name="warn", description="Warn a user")
     @app_commands.checks.has_permissions(moderate_members=True)
     async def warn(self, interaction: discord.Interaction, member: discord.Member, rule: str, reason: str = "No reason provided"):
+        await interaction.response.defer(ephemeral=True)
         if member.top_role >= interaction.user.top_role and interaction.user != interaction.guild.owner:
             return await interaction.response.send_message("❌ You cannot warn someone with a higher or equal role.", ephemeral=True)
         
@@ -71,11 +72,12 @@ class Moderation(commands.Cog):
         except:
             pass
         
-        await interaction.response.send_message(f"✅ {member.mention} has been warned. Total warnings: {warning_count}", ephemeral=True)
+        await interaction.followup.send(f"✅ {member.mention} has been warned. Total warnings: {warning_count}", ephemeral=True)
     
     @app_commands.command(name="warnings", description="Check warnings for a user")
     @app_commands.checks.has_permissions(moderate_members=True)
     async def warnings(self, interaction: discord.Interaction, member: discord.Member):
+        await interaction.response.defer(ephemeral=True)
         warnings = await self.db.get_warnings(interaction.guild.id, member.id)
         
         if not warnings:
@@ -102,7 +104,7 @@ class Moderation(commands.Cog):
         if len(warnings) > 10:
             embed.set_footer(text=f"Showing 10 of {len(warnings)} warnings")
         
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.followup.send(embed=embed, ephemeral=True)
     
     @app_commands.command(name="clearwarnings", description="Clear all warnings for a user")
     @app_commands.checks.has_permissions(moderate_members=True)
@@ -125,6 +127,7 @@ class Moderation(commands.Cog):
     @app_commands.command(name="kick", description="Kick a user from the server")
     @app_commands.checks.has_permissions(kick_members=True)
     async def kick(self, interaction: discord.Interaction, member: discord.Member, reason: str = "No reason provided"):
+        await interaction.response.defer(ephemeral=True)
         if member.top_role >= interaction.user.top_role and interaction.user != interaction.guild.owner:
             return await interaction.response.send_message("❌ You cannot kick someone with a higher or equal role.", ephemeral=True)
         
@@ -152,11 +155,12 @@ class Moderation(commands.Cog):
         embed.add_field(name="Reason", value=reason, inline=False)
         
         await self.log_to_channel(interaction.guild, embed)
-        await interaction.response.send_message(f"✅ {member} has been kicked.", ephemeral=True)
+        await interaction.followup.send(f"✅ {member} has been kicked.", ephemeral=True)
     
     @app_commands.command(name="ban", description="Ban a user from the server")
     @app_commands.checks.has_permissions(ban_members=True)
     async def ban(self, interaction: discord.Interaction, member: discord.Member, reason: str = "No reason provided", delete_messages: int = 0):
+        await interaction.response.defer(ephemeral=True)
         if member.top_role >= interaction.user.top_role and interaction.user != interaction.guild.owner:
             return await interaction.response.send_message("❌ You cannot ban someone with a higher or equal role.", ephemeral=True)
         
@@ -184,7 +188,7 @@ class Moderation(commands.Cog):
         embed.add_field(name="Reason", value=reason, inline=False)
         
         await self.log_to_channel(interaction.guild, embed)
-        await interaction.response.send_message(f"✅ {member} has been banned.", ephemeral=True)
+        await interaction.followup.send(f"✅ {member} has been banned.", ephemeral=True)
     
     @app_commands.command(name="unban", description="Unban a user")
     @app_commands.checks.has_permissions(ban_members=True)
@@ -215,6 +219,7 @@ class Moderation(commands.Cog):
     @app_commands.checks.has_permissions(moderate_members=True)
     async def timeout(self, interaction: discord.Interaction, member: discord.Member, duration: int, reason: str = "No reason provided"):
         """Timeout a user for a specified duration in minutes"""
+        await interaction.response.defer(ephemeral=True)
         if member.top_role >= interaction.user.top_role and interaction.user != interaction.guild.owner:
             return await interaction.response.send_message("❌ You cannot timeout someone with a higher or equal role.", ephemeral=True)
         
@@ -267,16 +272,17 @@ class Moderation(commands.Cog):
                 await member.send(embed=dm_embed)
             except:
                 pass
-            
-            await interaction.response.send_message(f"✅ {member.mention} has been timed out for {duration_text}.", ephemeral=True)
+
+            await interaction.followup.send(f"✅ {member.mention} has been timed out for {duration_text}.", ephemeral=True)
         except discord.Forbidden:
-            await interaction.response.send_message("❌ I don't have permission to timeout this user.", ephemeral=True)
+            await interaction.followup.send("❌ I don't have permission to timeout this user.", ephemeral=True)
         except Exception as e:
-            await interaction.response.send_message(f"❌ An error occurred: {str(e)}", ephemeral=True)
+            await interaction.followup.send(f"❌ An error occurred: {str(e)}", ephemeral=True)
     
     @app_commands.command(name="untimeout", description="Remove timeout from a user")
     @app_commands.checks.has_permissions(moderate_members=True)
     async def untimeout(self, interaction: discord.Interaction, member: discord.Member, reason: str = "No reason provided"):
+        await interaction.response.defer(ephemeral=True)
         if member.timed_out_until is None:
             return await interaction.response.send_message("❌ User is not timed out.", ephemeral=True)
         
@@ -294,11 +300,11 @@ class Moderation(commands.Cog):
             embed.add_field(name="Reason", value=reason, inline=False)
             
             await self.log_to_channel(interaction.guild, embed)
-            await interaction.response.send_message(f"✅ {member.mention}'s timeout has been removed.", ephemeral=True)
+            await interaction.followup.send(f"✅ {member.mention}'s timeout has been removed.", ephemeral=True)
         except discord.Forbidden:
-            await interaction.response.send_message("❌ I don't have permission to remove timeout from this user.", ephemeral=True)
+            await interaction.followup.send("❌ I don't have permission to remove timeout from this user.", ephemeral=True)
         except Exception as e:
-            await interaction.response.send_message(f"❌ An error occurred: {str(e)}", ephemeral=True)
+            await interaction.followup.send(f"❌ An error occurred: {str(e)}", ephemeral=True)
     
     @app_commands.command(name="history", description="View moderation history for a user")
     @app_commands.checks.has_permissions(moderate_members=True)
