@@ -35,6 +35,7 @@ async def load_cogs():
 async def on_connect():
     await load_cogs()
     log.info("All cogs loaded.")
+    await bot.tree.sync()
 
 @bot.event
 async def on_ready():
@@ -51,7 +52,6 @@ async def on_ready():
 
     log.info(f"{bot.user} is ready!")
 
-    await bot.tree.sync()
 
 @bot.event
 async def on_command_error(ctx: commands.Context, error: commands.CommandError):
