@@ -134,6 +134,15 @@ class Database:
         finally:
             conn.close()
 
+    async def clear_warnings(self, guild_id: int, user_id: int) -> bool:
+        conn = await self.get_connection()
+        try:
+            async with conn.cursor() as cursor:
+                await cursor.execute("DELETE FROM warnings WHERE guild_id = %s AND user_id = %s", (guild_id, user_id))
+                return cursor.rowcount > 0
+        finally:
+            conn.close()
+
     # Points system methods
     async def award_points(self, guild_id: int, user_id: int, awarded_by: int, points: int, reason: str, thread_id: int = None) -> bool:
         """Award points to a user"""
