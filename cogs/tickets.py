@@ -47,7 +47,7 @@ class TicketView(discord.ui.View):
             interaction.bot.staff_role: discord.PermissionOverwrite(read_messages=True, send_messages=True)
         }
         
-        staff_role = discord.utils.get(guild.roles, name="Staff")
+        staff_role = discord.utils.get(guild.roles, name="Staff Team")
         if staff_role:
             overwrites[staff_role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
 
@@ -277,7 +277,7 @@ class Tickets(commands.Cog):
         
         await interaction.response.send_message(f"{user.mention} has been removed from this ticket.")
 
-    @app_commands.command(name="ticket-close", description="Close the current ticket")
+    @app_commands.command(name="close_ticket", description="Close the current ticket")
     async def close_ticket_command(self, interaction: discord.Interaction):
         if not interaction.channel.name.startswith("ticket-"):
             await interaction.response.send_message("This command can only be used in ticket channels!", ephemeral=True)
