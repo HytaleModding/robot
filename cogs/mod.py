@@ -81,7 +81,7 @@ class Moderation(commands.Cog):
         warnings = await self.db.get_warnings(interaction.guild.id, member.id)
         
         if not warnings:
-            return await interaction.response.send_message(f"{member.mention} has no warnings.", ephemeral=True)
+            return await interaction.followup.send(f"{member.mention} has no warnings.", ephemeral=True)
         
         embed = discord.Embed(
             title=f"⚠️ Warnings for {member}",
