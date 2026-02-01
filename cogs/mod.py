@@ -37,7 +37,7 @@ class Moderation(commands.Cog):
     async def warn(self, interaction: discord.Interaction, member: discord.Member, rule: str, reason: str = "No reason provided"):
         await interaction.response.defer(ephemeral=True)
         if member.top_role >= interaction.user.top_role and interaction.user != interaction.guild.owner:
-            return await interaction.response.send_message("❌ You cannot warn someone with a higher or equal role.", ephemeral=True)
+            return await interaction.followup.send("❌ You cannot warn someone with a higher or equal role.", ephemeral=True)
         
         warning_id = await self.db.add_warning(interaction.guild.id, member.id, interaction.user.id, reason)
         await self.db.log_action(interaction.guild.id, "warn", member.id, interaction.user.id, reason)
