@@ -44,7 +44,7 @@ class TicketView(discord.ui.View):
             guild.default_role: discord.PermissionOverwrite(read_messages=False),
             user: discord.PermissionOverwrite(read_messages=True, send_messages=True),
             guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True),
-            interaction.bot.staff_role: discord.PermissionOverwrite(read_messages=True, send_messages=True)
+            interaction.client.staff_role: discord.PermissionOverwrite(read_messages=True, send_messages=True)
         }
         
         staff_role = discord.utils.get(guild.roles, name="Staff Team")
