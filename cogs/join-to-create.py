@@ -23,7 +23,7 @@ class JoinToCreate(commands.Cog):
             )
             self.channels[member.id] = new_voice
             await member.move_to(new_voice)
-        elif after.channel == None and before.channel in self.channels.values():
+        elif after.channel is None and member.id in self.channels and before.channel == self.channels[member.id]:
             channel: discord.VoiceChannel = before.channel
             del self.channels[member.id]
             if len(channel.members) == 0:
