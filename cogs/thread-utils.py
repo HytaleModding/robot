@@ -18,6 +18,10 @@ class ThreadUtils(commands.Cog):
 
         self.bot.tree.add_command(self.pin_menu)
 
+    @commands.Cog.listener()
+    async def on_ready(self,):
+        self.bot.add_view(CloseThreadView(None))
+
     async def pin_message(self, interaction: discord.Interaction, message: discord.Message):
         if not isinstance(message.channel, discord.Thread):
             await interaction.response.send_message(
@@ -50,10 +54,34 @@ class ThreadUtils(commands.Cog):
             return
 
         if interaction.channel.owner_id != interaction.user.id:
-            await interaction.response.send_message(
-                "Only the thread owner can close the thread.", ephemeral=True
-            )
-            return
+            owner = self.bot.get_user(interaction.channel.owner_id)
+            if not owner:
+                await interaction.response.send_message(
+                    "Could not find the thread owner.", ephemeral=True
+                )
+                return
+            
+            participants = set()
+            async for message in interaction.channel.history(limit=None):
+                if not message.author.bot and message.author.id != interaction.user.id:
+                    participants.add(message.author)
+
+                if not participants:
+                    await interaction.response.send_message(
+                        f"{owner.mention}, {interaction.user.display_name} suggested closing this thread, but no other contributors were found.",
+                        allowed_mentions=discord.AllowedMentions(users=True)
+                    )
+                    return
+
+                select = UserSelect(list(participants), interaction.channel, self.bot)
+                view = CloseThreadView(select, interaction.channel.id, interaction.user.id)
+                
+                await interaction.response.send_message(
+                    f"{owner.mention}, {interaction.user.display_name} suggested closing this thread. Select the users who helped solve the problem:",
+                    view=view,
+                    allowed_mentions=discord.AllowedMentions(users=True)
+                )
+                return
 
         participants = set()
         async for message in interaction.channel.history(limit=None):
@@ -69,7 +97,7 @@ class ThreadUtils(commands.Cog):
             return
 
         select = UserSelect(list(participants), interaction.channel, self.bot)
-        view = CloseThreadView(select)
+        view = CloseThreadView(select, interaction.channel.id, interaction.user.id)
 
         await interaction.response.send_message(
             "Select the users who helped you solve your problem:",
@@ -94,7 +122,8 @@ class UserSelect(discord.ui.Select):
             placeholder="Choose users who helped you...",
             min_values=0,
             max_values=len(options),
-            options=options
+            options=options,
+            custom_id=f"close_thread_select:{thread.id}"
         )
 
     async def callback(self, interaction: discord.Interaction):
@@ -103,7 +132,6 @@ class UserSelect(discord.ui.Select):
                 "Thread will be closed without awarding points.", ephemeral=True
             )
         else:
-            awarded_users = []
             for user_id in self.values:
                 await self.bot.database.award_points(
                     guild_id=interaction.guild.id,
@@ -113,7 +141,6 @@ class UserSelect(discord.ui.Select):
                     reason="Helped in modding-help thread",
                     thread_id=self.thread.id
                 )
-                awarded_users.append(user.display_name)
             
             await interaction.response.send_message(
                 f"Thread will be closed.",
@@ -142,10 +169,30 @@ class UserSelect(discord.ui.Select):
         await self.thread.send(embed=embed)
         await self.thread.edit(archived=True, locked=True)
 
+class CancelButton(discord.ui.Button):
+    def __init__(self, thread_id: int):
+        super().__init__(
+            style=discord.ButtonStyle.secondary, 
+            label="Cancel", 
+            emoji="❌",
+            custom_id=f"close_thread_cancel:{thread_id}"
+        )
+    
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.send_message("Thread closing cancelled.", ephemeral=True)
+        self.view.clear_items()
+        self.view.stop()
+
 class CloseThreadView(discord.ui.View):
-    def __init__(self, select: UserSelect):
-        super().__init__(timeout=300)
-        self.add_item(select)
+    def __init__(self, select: UserSelect = None, thread_id: int = None, owner_id: int = None):
+        super().__init__(timeout=None)
+        self.thread_id = thread_id
+        self.owner_id = owner_id
+        
+        if select:
+            self.add_item(select)
+        if thread_id:
+            self.add_item(CancelButton(thread_id))
 
     async def on_timeout(self):
         for item in self.children:
