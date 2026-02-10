@@ -61,10 +61,13 @@ class ThreadUtils(commands.Cog):
                 participants.add(message.author)
 
         if not participants:
+            channel: discord.Thread = interaction.channel
+            await channel.edit(archived=True, locked=True)
             await interaction.response.send_message(
                 "No other users found in this thread to award points to.", ephemeral=True
             )
             return
+
         select = UserSelect(list(participants), interaction.channel, self.bot)
         view = CloseThreadView(select)
 
@@ -102,7 +105,7 @@ class UserSelect(discord.ui.Select):
         else:
             awarded_users = []
             for user_id in self.values:
-                await self.bot.db.award_points(
+                await self.bot.database.award_points(
                     guild_id=interaction.guild.id,
                     user_id=user_id,
                     awarded_by=interaction.user.id,
