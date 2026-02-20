@@ -553,3 +553,37 @@ class Database:
                 return cursor.rowcount
         finally:
             conn.close()
+
+    async def get_last_patch_id(self) -> int:
+        """Get the last patch ID"""
+        conn = await self.get_connection()
+        try:
+            async with conn.cursor() as cursor:
+                await cursor.execute("SELECT MAX(patch_id) FROM patches")
+                row = await cursor.fetchone()
+                return row[0] if row else 0
+        finally:
+            conn.close()
+
+    async def get_patch(self, patch_id: int) -> Optional[Dict]:
+        """Get a patch by ID"""
+        conn = await self.get_connection()
+        try:
+            async with conn.cursor(aiomysql.DictCursor) as cursor:
+                await cursor.execute("SELECT * FROM patches WHERE patch_id = %s", (patch_id,))
+                return await cursor.fetchone()
+        finally:
+            conn.close()
+
+    async def add_patch(self, version: str, patchline: str) -> int:
+        """Add a new patch"""
+        conn = await self.get_connection()
+        try:
+            async with conn.cursor() as cursor:
+                await cursor.execute(
+                    "INSERT INTO patches (version, patchline, time) VALUES (%s, %s, %s)",
+                    (version, patchline, datetime.utcnow())
+                )
+                return cursor.lastrowid
+        finally:
+            conn.close()
