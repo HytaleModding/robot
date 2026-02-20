@@ -33,10 +33,10 @@ class Tags(commands.Cog):
         
         embed = None
         if tag_data.description:
-            embed = discord.Embed(description=tag_data.description)
+            embed = discord.Embed(description=tag_data.description, timestamp=discord.utils.utcnow())
             if tag_data.title:
                 embed.title = tag_data.title
-            embed.set_footer(text="Hytale Modding", icon_url='https://img.willofsteel.me/u/p2SdbC.png')
+            embed.set_footer(text="Hytale Modding", icon_url='https://cdn.internal.hytalemodding.dev/assets/logo.png')
 
         content = tag_data.url or ""
 
