@@ -296,7 +296,8 @@ class Utils(commands.Cog):
         discord_link_pattern = r'https://discord\.com/channels/(\d+)/(\d+)/(\d+)'
         matches = re.findall(discord_link_pattern, message.content)
 
-        for match in matches:
+        embeds = []
+        for i, match in enumerate(matches[:5]):
             guild_id, channel_id, message_id = map(int, match)
 
             if guild_id != self.config.core.guild_id:
@@ -315,7 +316,6 @@ class Utils(commands.Cog):
                 if not target_message:
                     continue
 
-                
                 embed = discord.Embed(
                     description=profanity.censor(target_message.content) or "*No text content*",
                     color=0x2F3136,
@@ -334,7 +334,7 @@ class Utils(commands.Cog):
                     attachment_text = f"\n\n📎 {len(target_message.attachments)} attachment(s)"
                     embed.description += attachment_text
 
-                await message.reply(embed=embed, mention_author=False, allowed_mentions=discord.AllowedMentions.none())
+                embeds.append(embed)
 
             except (discord.NotFound, discord.Forbidden, discord.HTTPException):
                 continue
