@@ -575,6 +575,19 @@ class Database:
         finally:
             conn.close()
 
+    async def get_latest_patch(self, patchline: str) -> str:
+        conn = await self.get_connection()
+        try:
+            async with conn.cursor() as cursor:
+                await cursor.execute(
+                    "SELECT version FROM patches WHERE patchline = %s ORDER BY time DESC LIMIT 1",
+                    (patchline,)
+                )
+                row = await cursor.fetchone()
+                return row[0] if row else "unknown"
+        finally:
+            conn.close()
+
     async def add_patch(self, version: str, patchline: str) -> int:
         """Add a new patch"""
         conn = await self.get_connection()

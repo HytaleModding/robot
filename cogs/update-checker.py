@@ -13,8 +13,8 @@ class UpdateChecker(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        self.release_version: str = await self.fetch_version(RELEASE_URL)
-        self.pre_release_version: str = await self.fetch_version(PRE_RELEASE_URL)
+        self.release_version: str = await self.bot.database.get_latest_patch("release")
+        self.pre_release_version: str = await self.bot.database.get_latest_patch("pre-release")
         self.modding_news_channel: discord.TextChannel = self.bot.get_channel(1474458050550304961)
         self.check_for_updates.start()
 
@@ -22,7 +22,6 @@ class UpdateChecker(commands.Cog):
     async def check_for_updates(self):
         new_release_version = await self.fetch_version(RELEASE_URL)
         new_pre_release_version = await self.fetch_version(PRE_RELEASE_URL)
-        print(self.release_version, new_release_version)
         if new_release_version != self.release_version:
             old_version = self.release_version
             self.release_version = new_release_version
