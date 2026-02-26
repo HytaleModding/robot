@@ -15,7 +15,7 @@ class UpdateChecker(commands.Cog):
     async def on_ready(self):
         self.release_version: str = await self.bot.database.get_latest_patch("release")
         self.pre_release_version: str = await self.bot.database.get_latest_patch("pre-release")
-        self.modding_news_channel: discord.TextChannel = self.bot.get_channel(1474458050550304961)
+        self.modding_news_channel: discord.TextChannel = self.bot.get_channel(1440346500382064701)
         self.check_for_updates.start()
 
     @tasks.loop(minutes=1)
@@ -48,14 +48,14 @@ class UpdateChecker(commands.Cog):
 
     async def fetch_version(self, url: str) -> str:
         try:
-            response = requests.get(url,
-                                    headers={"User-Agent": "Mozilla/5.0"})
+            response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
             response.raise_for_status()
-            data = response.content
-            start = data.find(b"<version>") + len(b"<version>")
-            end = data.find(b"</version>")
-            return data[start:end].decode("utf-8")
-        except (requests.RequestException, KeyError) as e:
+            root = ET.fromstring(response.content)
+            latest_element = root.find(".//latest")
+            if latest_element is not None:
+                return latest_element.text
+            return "unknown"
+        except (requests.RequestException, ET.ParseError) as e:
             print(f"Error fetching version: {e}")
             return "unknown"
 
