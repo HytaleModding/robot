@@ -1,12 +1,14 @@
 import asyncio
+import hashlib
+import logging
+from collections import defaultdict
+from datetime import datetime, timedelta
+
 import discord
 from discord.ext import commands, tasks
 
 from config import ConfigSchema
 from database import Database
-from datetime import datetime
-
-import logging
 
 log = logging.getLogger(__name__)
 
@@ -15,12 +17,18 @@ class StatisticsCog(commands.Cog):
         self.bot = bot
         self.db = bot.database
         self.config: ConfigSchema = bot.config
+        self._pending_activity: dict[int, set[str]] = defaultdict(set)
+        self._dau_cache: dict[int, tuple[int, datetime]] = {}
 
         self.collect_stats.start()
+        self.refresh_activity_cache.start()
     
     def cog_unload(self):
         """Stop the background task when cog is unloaded"""
         self.collect_stats.cancel()
+        self.refresh_activity_cache.cancel()
+        if self._pending_activity:
+            asyncio.create_task(self._flush_pending_activity())
     
     @tasks.loop(minutes=5) 
     async def collect_stats(self):
@@ -35,6 +43,56 @@ class StatisticsCog(commands.Cog):
     async def before_collect_stats(self):
         """Wait for bot to be ready before starting stats collection"""
         await self.bot.wait_until_ready()
+
+    @tasks.loop(hours=1)
+    async def refresh_activity_cache(self):
+        """Persist unique activity for the last hour and refresh cached DAU values"""
+        try:
+            await self._refresh_activity_cache()
+        except Exception as e:
+            log.error(f"Error refreshing activity cache: {e}")
+
+    @refresh_activity_cache.before_loop
+    async def before_refresh_activity_cache(self):
+        await self.bot.wait_until_ready()
+        await self._refresh_activity_cache()
+
+    async def _refresh_activity_cache(self):
+        """Persist pending activity, remove expired rows, and refresh the cached DAU"""
+        await self._flush_pending_activity()
+        await self.db.cleanup_old_anonymous_activity(hours=24)
+        await self.db.cleanup_old_dau_snapshots(days=30)
+
+        guild = self.bot.get_guild(self.config.core.guild_id)
+        if guild is None:
+            return
+
+        dau = await self.db.get_active_users_24h(guild.id)
+        await self.db.record_dau_snapshot(guild.id, dau, snapshot_at=datetime.utcnow())
+        self._dau_cache[guild.id] = (dau, datetime.utcnow())
+        log.info(f"Refreshed cached DAU for {guild.name}: {dau}")
+
+    async def _flush_pending_activity(self):
+        """Write pending activity buckets to the database in one batch per guild"""
+        if not self._pending_activity:
+            return
+
+        flushed_at = datetime.utcnow()
+        for guild_id, user_hashes in list(self._pending_activity.items()):
+            if not user_hashes:
+                continue
+
+            await self.db.record_anonymous_activity(
+                guild_id=guild_id,
+                user_hashes=user_hashes,
+                recorded_at=flushed_at
+            )
+            self._pending_activity[guild_id].clear()
+
+    def _hash_user_id(self, guild_id: int, user_id: int) -> str:
+        """Create a one-way hash so raw user identifiers never reach the database"""
+        payload = f"{guild_id}:{user_id}:{self.bot.user.id if self.bot.user else 0}"
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
     
     async def _collect_guild_stats(self, guild):
         """Collect statistics for a single guild"""
@@ -75,12 +133,25 @@ class StatisticsCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        """Track user activity when they send messages"""
+        """Track user activity in memory so DAU can be updated in hourly batches"""
         if not message.author.bot and message.guild:
             try:
-                await self.db.update_user_activity(message.guild.id, message.author.id)
+                user_hash = self._hash_user_id(message.guild.id, message.author.id)
+                self._pending_activity[message.guild.id].add(user_hash)
             except Exception as e:
                 log.error(f"Error updating user activity: {e}")
+
+    async def get_cached_dau(self, guild_id: int) -> int | None:
+        """Return the cached DAU value if it is still fresh"""
+        cached = self._dau_cache.get(guild_id)
+        if cached is None:
+            return None
+
+        dau, computed_at = cached
+        if datetime.utcnow() - computed_at > timedelta(hours=1, minutes=5):
+            return None
+
+        return dau
 
 async def setup(bot):
     await bot.add_cog(StatisticsCog(bot))

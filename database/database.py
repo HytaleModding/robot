@@ -484,14 +484,27 @@ class Database:
             conn.close()
 
     # Server statistics methods for Grafana
-    async def update_user_activity(self, guild_id: int, user_id: int):
-        """Update the last message time for a user"""
+    async def record_anonymous_activity(self, guild_id: int, user_hashes: set[str], recorded_at: datetime | None = None):
+        """Store unique activity hashes for a guild without keeping usernames or raw user IDs"""
+        if not user_hashes:
+            return
+
         conn = await self.get_connection()
         try:
             async with conn.cursor() as cursor:
+                recorded_at = recorded_at or datetime.utcnow()
+                activity_date = recorded_at.date()
+                activity_hour = recorded_at.hour
+
+                values = [
+                    (guild_id, activity_date, activity_hour, user_hash, recorded_at)
+                    for user_hash in user_hashes
+                ]
+                placeholders = ", ".join(["(%s, %s, %s, %s, %s)"] * len(values))
+                flattened_values = [item for value in values for item in value]
                 await cursor.execute(
-                    "INSERT INTO user_activity (guild_id, user_id, last_message) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE last_message = VALUES(last_message)",
-                    (guild_id, user_id, datetime.utcnow())
+                    f"INSERT IGNORE INTO anonymous_activity_events (guild_id, activity_date, activity_hour, user_hash, recorded_at) VALUES {placeholders}",
+                    flattened_values
                 )
         finally:
             conn.close()
@@ -532,11 +545,50 @@ class Database:
             async with conn.cursor() as cursor:
                 cutoff_time = datetime.utcnow() - timedelta(hours=24)
                 await cursor.execute(
-                    "SELECT COUNT(*) FROM user_activity WHERE guild_id = %s AND last_message >= %s",
+                    "SELECT COUNT(DISTINCT user_hash) FROM anonymous_activity_events WHERE guild_id = %s AND recorded_at >= %s",
                     (guild_id, cutoff_time)
                 )
                 row = await cursor.fetchone()
                 return row[0] if row else 0
+        finally:
+            conn.close()
+
+    async def record_dau_snapshot(self, guild_id: int, dau_24h: int, snapshot_at: datetime | None = None):
+        """Persist the current DAU value for Grafana and historical charts"""
+        conn = await self.get_connection()
+        try:
+            async with conn.cursor() as cursor:
+                snapshot_at = snapshot_at or datetime.utcnow()
+                snapshot_hour = snapshot_at.replace(minute=0, second=0, microsecond=0)
+                await cursor.execute(
+                    """
+                    INSERT INTO dau_snapshots (guild_id, snapshot_at, dau_24h, computed_at)
+                    VALUES (%s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE
+                        dau_24h = VALUES(dau_24h),
+                        computed_at = VALUES(computed_at)
+                    """,
+                    (guild_id, snapshot_hour, dau_24h, snapshot_at)
+                )
+        finally:
+            conn.close()
+
+    async def get_dau_snapshots(self, guild_id: int, hours: int = 24) -> List[Dict]:
+        """Get persisted DAU snapshots for the past N hours"""
+        conn = await self.get_connection()
+        try:
+            async with conn.cursor(aiomysql.DictCursor) as cursor:
+                cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+                await cursor.execute(
+                    """
+                    SELECT guild_id, snapshot_at, dau_24h, computed_at
+                    FROM dau_snapshots
+                    WHERE guild_id = %s AND snapshot_at >= %s
+                    ORDER BY snapshot_at DESC
+                    """,
+                    (guild_id, cutoff_time)
+                )
+                return await cursor.fetchall()
         finally:
             conn.close()
 
@@ -548,6 +600,34 @@ class Database:
                 cutoff_time = datetime.utcnow() - timedelta(days=days)
                 await cursor.execute(
                     "DELETE FROM server_stats WHERE timestamp < %s",
+                    (cutoff_time,)
+                )
+                return cursor.rowcount
+        finally:
+            conn.close()
+
+    async def cleanup_old_anonymous_activity(self, hours: int = 24):
+        """Remove anonymous activity data older than the configured retention window"""
+        conn = await self.get_connection()
+        try:
+            async with conn.cursor() as cursor:
+                cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+                await cursor.execute(
+                    "DELETE FROM anonymous_activity_events WHERE recorded_at < %s",
+                    (cutoff_time,)
+                )
+                return cursor.rowcount
+        finally:
+            conn.close()
+
+    async def cleanup_old_dau_snapshots(self, days: int = 30):
+        """Remove old DAU snapshots after Grafana no longer needs them"""
+        conn = await self.get_connection()
+        try:
+            async with conn.cursor() as cursor:
+                cutoff_time = datetime.utcnow() - timedelta(days=days)
+                await cursor.execute(
+                    "DELETE FROM dau_snapshots WHERE snapshot_at < %s",
                     (cutoff_time,)
                 )
                 return cursor.rowcount
