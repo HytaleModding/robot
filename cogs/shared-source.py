@@ -89,17 +89,26 @@ class SharedSource(commands.Cog):
                     if status == "completed":
                         profile_username = payload.get("profile_username") or "the signed-in Hytale account"
                         shared_source = payload.get("shared_source")
-                        await interaction.followup.send(
-                            (
-                                f"Shared source verification completed for {profile_username}. "
-                            ),
-                            ephemeral=True,
-                        )
+
                         if shared_source:
                             await interaction.user.add_roles(
                                 discord.Object(id=1523120733600088126), # 1523120733600088126
                             )
-                        return
+                            await interaction.followup.send(
+                                (
+                                    f"Shared source verification completed for {profile_username}. "
+                                ),
+                                ephemeral=True,
+                            )
+                            return
+                        else:
+                            await interaction.followup.send(
+                                (
+                                    f"You do not have access to the Hytale Shared Source Repositories. Please head to https://accounts.hytale.com/shared-source to request access to the shared source repositories and re-run this command."
+                                ),
+                                ephemeral=True,
+                            )
+                            return
 
                     await asyncio.sleep(POLL_INTERVAL_SECONDS)
         except asyncio.CancelledError:
@@ -126,7 +135,7 @@ class SharedSource(commands.Cog):
             description="Click the button below to authorize your Hytale account and get access to the shared source channel. \n\nYou will be prompted to log in to your Hytale account.",
             color=discord.Color.blurple(),
         )
-        embed.add_field(name="Shared Source Disclaimer", value="Per the [Temporary Shared Source License Agreement](https://hytale.com/shared-source-license), please don't share screenshots of the server code, or screenshots of the shared source channel, with anyone who hasn't accepted the agreement. Clicking the button below means you agree to these terms.", inline=False)
+        embed.add_field(name="Shared Source Disclaimer", value="Per the [Hytale Shared Source License Agreement](https://hytale.com/shared-source-license), please don't share screenshots of the server code, or screenshots of the shared source channel, with anyone who hasn't accepted the agreement. Clicking the button below means you agree to these terms.", inline=False)
         embed.set_thumbnail(url="https://cdn.internal.hytalemodding.dev/assets/hytale-icon.png")
 
         await interaction.response.send_message(
